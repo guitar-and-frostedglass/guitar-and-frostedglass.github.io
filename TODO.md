@@ -1,2 +1,3 @@
 - 2026-02-04: Deploy backend to Oracle and test network
 - 2026-02-04: Implement user content sharing so users can see others' notes
+- 2026-02-04: Understand what is prisma migration doing, does it need to be in the repo
