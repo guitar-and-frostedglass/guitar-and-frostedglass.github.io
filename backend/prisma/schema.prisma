@@ -1,0 +1,43 @@
+// Prisma Schema for Guitar & Frosted Glass
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 用户表
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  displayName  String   @map("display_name")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // 关联
+  notes Note[]
+
+  @@map("users")
+}
+
+// 便签表
+model Note {
+  id        String   @id @default(uuid())
+  content   String   @default("")
+  color     String   @default("yellow")
+  positionX Int      @default(50) @map("position_x")
+  positionY Int      @default(50) @map("position_y")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // 关联
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notes")
+}
+

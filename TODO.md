@@ -1,0 +1,2 @@
+- 2026-02-04: Deploy backend to Oracle and test network
+- 2026-02-04: Implement user content sharing so users can see others' notes

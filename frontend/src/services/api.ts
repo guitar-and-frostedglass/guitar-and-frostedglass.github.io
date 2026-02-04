@@ -1,0 +1,45 @@
+import axios, { AxiosError } from 'axios'
+import type { ApiResponse } from '../../../shared/types'
+
+// API 基础配置
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
+
+// 创建 axios 实例
+export const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 10000,
+})
+
+// 请求拦截器 - 添加认证 token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
+// 响应拦截器 - 处理错误
+api.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError<ApiResponse<unknown>>) => {
+    if (error.response?.status === 401) {
+      // Token 过期或无效，清除本地存储并重定向到登录页
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      window.location.href = '/guitar-and-frostedglass-dev/login'
+    }
+    return Promise.reject(error)
+  }
+)
+
+export default api
+
