@@ -16,8 +16,13 @@ const PORT = process.env.PORT || 4000
 
 // 中间件
 app.use(helmet())
+const corsOriginEnv = process.env.CORS_ORIGIN || 'http://localhost:3000'
+const corsOrigins = corsOriginEnv.includes(',')
+  ? corsOriginEnv.split(',').map(o => o.trim())
+  : corsOriginEnv
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: corsOrigins,
   credentials: true,
 }))
 app.use(morgan('dev'))

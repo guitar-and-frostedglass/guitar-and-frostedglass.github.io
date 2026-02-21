@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gfg-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api-prod:
+    build: .
+    container_name: gfg-api-prod
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/gfg_prod
+      JWT_SECRET: ${JWT_SECRET_PROD:?Set JWT_SECRET_PROD in .env}
+      JWT_EXPIRES_IN: 7d
+      CORS_ORIGIN: ${CORS_ORIGIN_PROD:-https://guitar-and-frostedglass.github.io}
+    ports:
+      - "4000:4000"
+
+  api-dev:
+    build: .
+    container_name: gfg-api-dev
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/gfg_dev
+      JWT_SECRET: ${JWT_SECRET_DEV:?Set JWT_SECRET_DEV in .env}
+      JWT_EXPIRES_IN: 7d
+      CORS_ORIGIN: "${CORS_ORIGIN_DEV:-https://guitar-and-frostedglass.github.io,http://localhost:3000}"
+    ports:
+      - "4001:4000"
+
+volumes:
+  postgres_data:
