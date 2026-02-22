@@ -35,7 +35,7 @@ api.interceptors.response.use(
       // Token 过期或无效，清除本地存储并重定向到登录页
       localStorage.removeItem('token')
       localStorage.removeItem('user')
-      window.location.href = '/guitar-and-frostedglass-dev/login'
+      window.location.href = '/login'
     }
     return Promise.reject(error)
   }

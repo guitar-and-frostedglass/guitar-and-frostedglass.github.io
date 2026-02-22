@@ -76,7 +76,7 @@ All managed via `docker-compose.prod.yml` in `~/guitar-and-frostedglass-dev/back
 | `POSTGRES_PASSWORD` | postgres, api-prod, api-dev | PostgreSQL password (shared) |
 | `JWT_SECRET_PROD` | api-prod | JWT signing key for production |
 | `JWT_SECRET_DEV` | api-dev | JWT signing key for dev (separate so tokens can't cross environments) |
-| `CORS_ORIGIN_PROD` | api-prod | Allowed CORS origin (GitHub Pages URL) |
+| `CORS_ORIGIN_PROD` | api-prod | Allowed CORS origin (`https://guitar-and-frostedglass.github.io`) |
 | `CORS_ORIGIN_DEV` | api-dev | Allowed CORS origins (GitHub Pages + localhost, comma-separated) |
 | `ADMIN_EMAIL` | api-prod, api-dev | Email for the initial admin account (seeded on first startup) |
 | `ADMIN_PASSWORD` | api-prod, api-dev | Password for the initial admin account (bcrypt-hashed before storing) |
@@ -185,7 +185,7 @@ Certbot auto-modified the nginx config to add the `listen 443 ssl` block and red
 - `creator_id` (FK → users.id, cascade delete)
 - `created_at`
 
-Managed via Prisma migrations in `backend/prisma/migrations/`.
+Managed via Prisma migrations in `backend/prisma/migrations/`. Migration files are generated locally with `prisma migrate dev` and applied on the server with `prisma migrate deploy`. See [DEPLOYMENT.md](DEPLOYMENT.md#prisma-migration-workflow) for the full workflow.
 
 ## Frontend
 
@@ -208,7 +208,7 @@ Managed via Prisma migrations in `backend/prisma/migrations/`.
 
 ### Build configuration
 
-- Base path: `/guitar-and-frostedglass-dev/` (for GitHub Pages)
+- Base path: `/` (repo is `guitar-and-frostedglass.github.io`, served from root)
 - API URL: set via `VITE_API_URL` env var at build time
 - Deployed via GitHub Actions (`.github/workflows/deploy-frontend.yml`)
 - Trigger: push to `main` that touches `frontend/`, `shared/`, or the workflow file

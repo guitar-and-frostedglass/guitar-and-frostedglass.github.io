@@ -6,7 +6,7 @@
 |------|-------|
 | Prod API | `https://gfg-api.duckdns.org/api/*` |
 | Dev API | `https://gfg-api.duckdns.org/dev-api/*` |
-| Frontend | `https://guitar-and-frostedglass.github.io/guitar-and-frostedglass-dev/` |
+| Frontend | `https://guitar-and-frostedglass.github.io/` |
 | Server | Oracle Cloud VM `129.153.195.31` (SSH via bastion) |
 | DNS | `gfg-api.duckdns.org` on DuckDNS |
 | SSL cert | Let's Encrypt, auto-renews via certbot timer |
@@ -41,16 +41,37 @@ sudo systemctl status nginx
 
 ### Deploy a code update
 
+If the update includes **schema changes** (new migration files in `prisma/migrations/`), the API containers will crash-loop until the migration is applied. Use `run --rm` (not `exec`) to run migrations against crashing containers:
+
+```bash
+cd ~/guitar-and-frostedglass-dev
+git pull
+cd backend
+
+# Rebuild images
+docker compose -f docker-compose.prod.yml up -d --build
+
+# Apply migrations (use 'run --rm' — containers may be crash-looping)
+docker compose -f docker-compose.prod.yml run --rm api-prod npx prisma migrate deploy
+docker compose -f docker-compose.prod.yml run --rm api-dev npx prisma migrate deploy
+
+# Restart so they pick up the migrated database
+docker compose -f docker-compose.prod.yml restart api-prod api-dev
+```
+
+If there are **no schema changes**, a simple rebuild is enough:
+
 ```bash
 cd ~/guitar-and-frostedglass-dev
 git pull
 cd backend
 docker compose -f docker-compose.prod.yml up -d --build
-docker compose -f docker-compose.prod.yml exec api-prod npx prisma migrate deploy
-docker compose -f docker-compose.prod.yml exec api-dev npx prisma migrate deploy
 ```
 
 On startup, each API container automatically seeds an admin account (from `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `.env`) if no admin user exists in its database.
+
+> **Why `run --rm` instead of `exec`?**
+> `exec` connects to a running container. If the app crashes on startup (e.g. because a migration hasn't been applied yet), the container is stuck in a restart loop and `exec` will fail with "Container is restarting". `run --rm` starts a fresh one-off container to run the command and removes it when done.
 
 ### SSL certificate renewal
 
@@ -99,8 +120,7 @@ cd ~/guitar-and-frostedglass-dev/backend
 docker compose -f docker-compose.prod.yml exec postgres pg_dump -U postgres gfg_prod > backup_prod_before_reset.sql
 docker compose -f docker-compose.prod.yml exec postgres psql -U postgres -c "DROP DATABASE gfg_prod;"
 docker compose -f docker-compose.prod.yml exec postgres psql -U postgres -c "CREATE DATABASE gfg_prod;"
-docker compose -f docker-compose.prod.yml exec api-prod npx prisma migrate deploy
-# Restart api-prod so seedAdmin() runs again on the fresh DB
+docker compose -f docker-compose.prod.yml run --rm api-prod npx prisma migrate deploy
 docker compose -f docker-compose.prod.yml restart api-prod
 ```
 
@@ -136,6 +156,56 @@ After the initial admin is created, you can:
 ### Login
 
 Users can log in with **either their email or their display name** (plus password). The system auto-detects which one was provided based on whether the input contains `@`.
+
+---
+
+## Prisma Migration Workflow
+
+Prisma migration is a two-step process done in two different places:
+
+| Step | Where | Command | Purpose |
+|------|-------|---------|---------|
+| Generate migration SQL | **Local machine** | `prisma migrate dev --name xxx` | Diffs the schema, generates SQL files in `prisma/migrations/` |
+| Apply migration SQL | **Server (Docker)** | `prisma migrate deploy` | Executes existing SQL files against the production database |
+
+### Generating migrations locally
+
+You need a temporary PostgreSQL to generate migration files. If you don't have Docker locally, use Homebrew:
+
+```bash
+brew install postgresql@16
+brew services start postgresql@16
+/opt/homebrew/opt/postgresql@16/bin/createdb my_temp_db
+
+cd backend
+DATABASE_URL="postgresql://$(whoami)@localhost:5432/my_temp_db" npx --no-install prisma migrate dev --name describe-your-change
+
+# Clean up
+brew services stop postgresql@16
+```
+
+> **Important:** Do NOT use `npx prisma` without `--no-install` — it may download the latest Prisma (v7+) which requires a different Node version. Always use `npx --no-install` to use the project's local Prisma v5.
+
+After the migration files are generated, commit and push them:
+
+```bash
+git add prisma/migrations/
+git commit -m "add migration: describe-your-change"
+git push
+```
+
+### Applying migrations on the server
+
+```bash
+ssh g-f-backend-ubuntu
+cd ~/guitar-and-frostedglass-dev
+git pull
+cd backend
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml run --rm api-prod npx prisma migrate deploy
+docker compose -f docker-compose.prod.yml run --rm api-dev npx prisma migrate deploy
+docker compose -f docker-compose.prod.yml restart api-prod api-dev
+```
 
 ---
 
@@ -208,18 +278,27 @@ cat .env | grep ADMIN_PASSWORD
 
 ```bash
 docker compose -f docker-compose.prod.yml up -d --build
-docker compose -f docker-compose.prod.yml exec api-prod npx prisma migrate deploy
-docker compose -f docker-compose.prod.yml exec api-dev npx prisma migrate deploy
+
+# Containers may crash-loop before migration — this is expected. Use 'run --rm':
+docker compose -f docker-compose.prod.yml run --rm api-prod npx prisma migrate deploy
+docker compose -f docker-compose.prod.yml run --rm api-dev npx prisma migrate deploy
+
+# Restart so they boot successfully with the migrated database
+docker compose -f docker-compose.prod.yml restart api-prod api-dev
 ```
 
 Verify the admin seed ran successfully:
 
 ```bash
-docker compose -f docker-compose.prod.yml logs api-prod | grep Seed
-docker compose -f docker-compose.prod.yml logs api-dev | grep Seed
+docker compose -f docker-compose.prod.yml logs --tail 10 api-prod | grep -E "Seed|运行在"
+docker compose -f docker-compose.prod.yml logs --tail 10 api-dev | grep -E "Seed|运行在"
 ```
 
-You should see `[Seed] 已创建管理员账号: your-admin@email.com`.
+You should see:
+```
+[Seed] 已创建管理员账号: your-admin@email.com
+🎸 Guitar & Frosted Glass API 运行在 http://localhost:4000
+```
 
 ### 6. Configure Nginx
 
@@ -268,7 +347,7 @@ sudo certbot --nginx -d gfg-api.duckdns.org
 
 ### 8. First login and invite users
 
-1. Open `https://guitar-and-frostedglass.github.io/guitar-and-frostedglass-dev/login`
+1. Open `https://guitar-and-frostedglass.github.io/login`
 2. Log in with the `ADMIN_EMAIL` and `ADMIN_PASSWORD` from step 4
 3. Click the user avatar dropdown > **管理后台**
 4. Go to the **邀请码** tab and click **生成邀请码**
