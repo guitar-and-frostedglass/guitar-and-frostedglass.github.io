@@ -25,7 +25,11 @@ router.put(
   adminController.updateUserRole
 )
 
-router.post('/invite-codes', adminController.generateInviteCode)
+router.post(
+  '/invite-codes',
+  [body('email').optional().isEmail().withMessage('邮箱格式不正确')],
+  adminController.generateInviteCode
+)
 router.get('/invite-codes', adminController.getInviteCodes)
 
 export default router

@@ -25,8 +25,11 @@ export const adminService = {
     throw new Error(response.data.error || '更新角色失败')
   },
 
-  async generateInviteCode(): Promise<InviteCode> {
-    const response = await api.post<ApiResponse<InviteCode>>('/admin/invite-codes')
+  async generateInviteCode(email?: string): Promise<InviteCode & { emailSent?: boolean }> {
+    const response = await api.post<ApiResponse<InviteCode & { emailSent?: boolean }>>(
+      '/admin/invite-codes',
+      email ? { email } : {}
+    )
     if (response.data.success && response.data.data) {
       return response.data.data
     }

@@ -33,6 +33,12 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN_PROD:-https://guitar-and-frostedglass.github.io}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@gfg.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      FRONTEND_URL: ${FRONTEND_URL:-https://guitar-and-frostedglass.github.io}
     ports:
       - "4000:4000"
 
@@ -52,6 +58,12 @@ services:
       CORS_ORIGIN: "${CORS_ORIGIN_DEV:-https://guitar-and-frostedglass.github.io,http://localhost:3000}"
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@gfg.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      FRONTEND_URL: ${FRONTEND_URL:-https://guitar-and-frostedglass.github.io}
     ports:
       - "4001:4000"
 

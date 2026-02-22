@@ -13,6 +13,8 @@ export default function Admin() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [isSending, setIsSending] = useState(false)
 
   const loadUsers = useCallback(async () => {
     setIsLoading(true)
@@ -68,12 +70,23 @@ export default function Admin() {
   }
 
   const handleGenerateCode = async () => {
+    const emailToSend = inviteEmail.trim() || undefined
+    setIsSending(true)
     try {
-      const code = await adminService.generateInviteCode()
-      setInviteCodes((prev) => [code, ...prev])
-      showSuccess('邀请码已生成')
+      const result = await adminService.generateInviteCode(emailToSend)
+      setInviteCodes((prev) => [result, ...prev])
+      if (emailToSend && result.emailSent) {
+        showSuccess(`邀请码已生成，邮件已发送至 ${emailToSend}`)
+      } else if (emailToSend && !result.emailSent) {
+        showSuccess('邀请码已生成，但邮件发送失败，请手动分享')
+      } else {
+        showSuccess('邀请码已生成')
+      }
+      setInviteEmail('')
     } catch (err) {
       setError(err instanceof Error ? err.message : '生成失败')
+    } finally {
+      setIsSending(false)
     }
   }
 
@@ -256,18 +269,29 @@ export default function Admin() {
         {!isLoading && activeTab === 'invites' && (
           <div className="space-y-4">
             <div className="bg-white rounded-xl shadow-sm border p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-semibold text-gray-800">生成邀请码</h3>
-                  <p className="text-sm text-gray-500 mt-1">邀请码有效期为15分钟，每个邀请码只能使用一次</p>
-                </div>
+              <div className="mb-4">
+                <h3 className="font-semibold text-gray-800">生成邀请码</h3>
+                <p className="text-sm text-gray-500 mt-1">邀请码有效期为15分钟，每个邀请码只能使用一次</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="收件邮箱（可选，填写后自动发送邀请邮件）"
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 
+                    focus:border-primary-400 focus:ring-2 focus:ring-primary-100 
+                    transition-all duration-200 bg-white/50 text-sm"
+                />
                 <button
                   onClick={handleGenerateCode}
+                  disabled={isSending}
                   className="px-5 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 
                     text-white rounded-xl hover:from-primary-600 hover:to-primary-700 
-                    transition-all font-medium text-sm shadow-sm"
+                    transition-all font-medium text-sm shadow-sm whitespace-nowrap
+                    disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  生成邀请码
+                  {isSending ? '发送中...' : inviteEmail.trim() ? '生成并发送' : '生成邀请码'}
                 </button>
               </div>
             </div>

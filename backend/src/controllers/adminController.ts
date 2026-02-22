@@ -3,6 +3,7 @@ import crypto from 'crypto'
 import { prisma } from '../utils/prisma.js'
 import { createError } from '../middleware/errorHandler.js'
 import { AuthRequest } from '../middleware/auth.js'
+import { sendInviteEmail } from '../utils/mailer.js'
 
 export async function getAllUsers(
   req: AuthRequest,
@@ -101,6 +102,8 @@ export async function generateInviteCode(
     const userId = req.userId
     if (!userId) throw createError('未认证', 401)
 
+    const { email } = req.body as { email?: string }
+
     const code = crypto.randomBytes(4).toString('hex').toUpperCase()
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000)
 
@@ -112,7 +115,17 @@ export async function generateInviteCode(
       },
     })
 
-    res.status(201).json({ success: true, data: inviteCode })
+    let emailSent = false
+    if (email) {
+      try {
+        await sendInviteEmail(email, code, expiresAt)
+        emailSent = true
+      } catch (err) {
+        console.error('[invite] Failed to send email:', err)
+      }
+    }
+
+    res.status(201).json({ success: true, data: { ...inviteCode, emailSent } })
   } catch (error) {
     next(error)
   }

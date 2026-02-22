@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 
 export default function Register() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { register, isLoading, error, clearError } = useAuthStore()
   
   const [formData, setFormData] = useState({
@@ -11,7 +12,7 @@ export default function Register() {
     displayName: '',
     password: '',
     confirmPassword: '',
-    inviteCode: '',
+    inviteCode: searchParams.get('code') || '',
   })
   const [validationError, setValidationError] = useState('')
 
