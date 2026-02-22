@@ -175,24 +175,24 @@ export default function Admin() {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
+        <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit max-w-full overflow-x-auto">
           <button
             onClick={() => setActiveTab('users')}
-            className={`px-5 py-2 text-sm font-medium rounded-lg transition-all
+            className={`px-3 sm:px-5 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all whitespace-nowrap
               ${activeTab === 'users' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
           >
             用户管理
           </button>
           <button
             onClick={() => setActiveTab('invites')}
-            className={`px-5 py-2 text-sm font-medium rounded-lg transition-all
+            className={`px-3 sm:px-5 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all whitespace-nowrap
               ${activeTab === 'invites' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
           >
             邀请码
           </button>
           <button
             onClick={() => setActiveTab('deleted-replies')}
-            className={`px-5 py-2 text-sm font-medium rounded-lg transition-all
+            className={`px-3 sm:px-5 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all whitespace-nowrap
               ${activeTab === 'deleted-replies' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
           >
             删除记录
@@ -293,12 +293,12 @@ export default function Admin() {
                 <h3 className="font-semibold text-gray-800">生成邀请码</h3>
                 <p className="text-sm text-gray-500 mt-1">邀请码有效期为15分钟，每个邀请码只能使用一次</p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <input
                   type="email"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="收件邮箱（可选，填写后自动发送邀请邮件）"
+                  placeholder="收件邮箱（可选，自动发邀请邮件）"
                   className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 
                     focus:border-primary-400 focus:ring-2 focus:ring-primary-100 
                     transition-all duration-200 bg-white/50 text-sm"
@@ -309,7 +309,7 @@ export default function Admin() {
                   className="px-5 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 
                     text-white rounded-xl hover:from-primary-600 hover:to-primary-700 
                     transition-all font-medium text-sm shadow-sm whitespace-nowrap
-                    disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                 >
                   {isSending ? '发送中...' : inviteEmail.trim() ? '生成并发送' : '生成邀请码'}
                 </button>
@@ -399,22 +399,16 @@ export default function Admin() {
                         <div className="bg-gray-50 border border-gray-100 rounded-lg px-4 py-3 mb-2">
                           <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{dr.content}</p>
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
-                          <span>
-                            回复时间: {new Date(dr.replyCreatedAt).toLocaleString('zh-CN')}
-                          </span>
-                          <span>·</span>
-                          <span>
-                            删除时间: {new Date(dr.deletedAt).toLocaleString('zh-CN')}
-                          </span>
-                          <span>·</span>
-                          <span>
-                            {isSelfDelete ? (
-                              <span className="text-gray-500">用户自行删除</span>
-                            ) : (
-                              <span className="text-amber-600">由 {dr.deletedByName} 删除</span>
-                            )}
-                          </span>
+                        <div className="flex items-center gap-x-1.5 gap-y-0.5 text-xs text-gray-400 flex-wrap">
+                          <span>{new Date(dr.replyCreatedAt).toLocaleString('zh-CN')} 回复</span>
+                          <span className="hidden sm:inline">·</span>
+                          <span>{new Date(dr.deletedAt).toLocaleString('zh-CN')} 删除</span>
+                          <span className="hidden sm:inline">·</span>
+                          {isSelfDelete ? (
+                            <span className="text-gray-500">用户自行删除</span>
+                          ) : (
+                            <span className="text-amber-600">由 {dr.deletedByName} 删除</span>
+                          )}
                         </div>
                       </div>
                     </div>

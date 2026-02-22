@@ -103,18 +103,18 @@ export default function NoteCard({ note }: NoteCardProps) {
           className="absolute inset-0 bg-white/95 rounded-xl flex items-center justify-center z-10"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="text-center p-4">
-            <p className="text-sm text-gray-700 mb-3">确定删除这个便签吗？</p>
-            <div className="flex gap-2 justify-center">
+          <div className="text-center px-3 py-3">
+            <p className="text-sm text-gray-700 mb-2.5">确定删除这个便签吗？</p>
+            <div className="flex gap-2 justify-center whitespace-nowrap">
               <button
                 onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(false) }}
-                className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                className="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
               >
                 取消
               </button>
               <button
                 onClick={handleDelete}
-                className="px-3 py-1 text-sm bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
+                className="px-3 py-1.5 text-xs bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
               >
                 删除
               </button>

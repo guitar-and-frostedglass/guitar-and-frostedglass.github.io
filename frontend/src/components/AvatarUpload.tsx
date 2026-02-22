@@ -58,8 +58,8 @@ export default function AvatarUpload({ onClose, onSave }: AvatarUploadProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl">
-        <div className="px-6 py-4 border-b flex items-center justify-between">
+      <div className="w-full max-w-md max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col">
+        <div className="px-6 py-4 border-b flex items-center justify-between flex-shrink-0">
           <h3 className="text-lg font-semibold text-gray-800">修改头像</h3>
           <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors">
             <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -68,7 +68,7 @@ export default function AvatarUpload({ onClose, onSave }: AvatarUploadProps) {
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto flex-1 min-h-0">
           {!imageSrc ? (
             <div
               onClick={() => fileInputRef.current?.click()}
@@ -84,7 +84,7 @@ export default function AvatarUpload({ onClose, onSave }: AvatarUploadProps) {
             </div>
           ) : (
             <>
-              <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-gray-900">
+              <div className="relative w-full aspect-square max-h-[50vh] rounded-xl overflow-hidden bg-gray-900">
                 <Cropper
                   image={imageSrc}
                   crop={crop}
@@ -138,7 +138,7 @@ export default function AvatarUpload({ onClose, onSave }: AvatarUploadProps) {
           )}
         </div>
 
-        <div className="px-6 py-4 border-t flex justify-end gap-3">
+        <div className="px-6 py-4 border-t flex justify-end gap-3 flex-shrink-0">
           <button
             onClick={onClose}
             className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
