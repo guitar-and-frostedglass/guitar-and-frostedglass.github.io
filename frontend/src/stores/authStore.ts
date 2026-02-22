@@ -10,6 +10,7 @@ interface AuthState {
 
   login: (data: LoginRequest) => Promise<void>
   register: (data: RegisterRequest) => Promise<void>
+  updateAvatar: (avatar: string) => Promise<void>
   logout: () => void
   clearError: () => void
   initAuth: () => void
@@ -51,6 +52,11 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ error: message, isLoading: false })
       throw error
     }
+  },
+
+  updateAvatar: async (avatar: string) => {
+    const updatedUser = await authService.updateAvatar(avatar)
+    set({ user: updatedUser })
   },
 
   logout: () => {

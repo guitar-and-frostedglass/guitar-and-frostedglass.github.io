@@ -4,6 +4,7 @@ export interface User {
   id: string
   email: string
   displayName: string
+  avatar?: string | null
   role: UserRole
   createdAt: string
   updatedAt: string

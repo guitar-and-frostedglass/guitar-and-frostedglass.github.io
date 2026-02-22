@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { adminService } from '../services/adminService'
 import type { AdminUser, InviteCode } from '../../../shared/types'
+import UserAvatar from '../components/UserAvatar'
 
 export default function Admin() {
   const navigate = useNavigate()
@@ -206,9 +207,7 @@ export default function Admin() {
                     <tr key={u.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-sm font-bold">
-                            {u.displayName[0]?.toUpperCase()}
-                          </div>
+                          <UserAvatar displayName={u.displayName} avatar={u.avatar} size={32} />
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-gray-800 truncate">{u.displayName}</p>
                             <p className="text-xs text-gray-500 truncate">{u.email}</p>

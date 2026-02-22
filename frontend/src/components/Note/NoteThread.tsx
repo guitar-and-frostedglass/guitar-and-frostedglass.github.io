@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNoteStore } from '../../stores/noteStore'
 import { useAuthStore } from '../../stores/authStore'
 import type { NoteColor } from '../../../../shared/types'
+import UserAvatar from '../UserAvatar'
 
 const colorAccent: Record<NoteColor, string> = {
   yellow: 'bg-amber-100 border-amber-200',
@@ -67,7 +68,6 @@ export default function NoteThread() {
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[85vh]">
-        {/* Header */}
         <div className={`flex items-center justify-between px-5 py-4 border-b rounded-t-2xl ${colorAccent[color]}`}>
           <div className="min-w-0 flex-1">
             <h2 className="text-lg font-bold text-gray-800 truncate">
@@ -89,14 +89,14 @@ export default function NoteThread() {
           </button>
         </div>
 
-        {/* Messages */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-          {/* Original post */}
           <div className="flex gap-3">
-            <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${avatarGradient[color]} 
-              flex items-center justify-center text-white text-sm font-bold flex-shrink-0`}>
-              {activeNote.user?.displayName?.[0]?.toUpperCase() || '?'}
-            </div>
+            <UserAvatar
+              displayName={activeNote.user?.displayName}
+              avatar={activeNote.user?.avatar}
+              size={32}
+              gradient={avatarGradient[color]}
+            />
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline gap-2 mb-1">
                 <span className="text-sm font-semibold text-gray-800">
@@ -112,16 +112,16 @@ export default function NoteThread() {
             </div>
           </div>
 
-          {/* Replies */}
           {activeNote.replies?.map((reply) => {
             const isMe = reply.userId === user?.id
             return (
               <div key={reply.id} className="flex gap-3">
-                <div className={`w-8 h-8 rounded-full bg-gradient-to-br 
-                  ${isMe ? 'from-primary-400 to-primary-500' : 'from-gray-300 to-gray-400'} 
-                  flex items-center justify-center text-white text-sm font-bold flex-shrink-0`}>
-                  {reply.user?.displayName?.[0]?.toUpperCase() || '?'}
-                </div>
+                <UserAvatar
+                  displayName={reply.user?.displayName}
+                  avatar={reply.user?.avatar}
+                  size={32}
+                  gradient={isMe ? 'from-primary-400 to-primary-500' : 'from-gray-300 to-gray-400'}
+                />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 mb-1">
                     <span className="text-sm font-semibold text-gray-800">
@@ -142,7 +142,6 @@ export default function NoteThread() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Reply Input */}
         <div className="border-t px-5 py-3">
           <div className="flex gap-2">
             <textarea

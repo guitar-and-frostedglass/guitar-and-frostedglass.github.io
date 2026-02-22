@@ -60,6 +60,7 @@ export async function register(
           id: true,
           email: true,
           displayName: true,
+          avatar: true,
           role: true,
           createdAt: true,
           updatedAt: true,
@@ -122,6 +123,7 @@ export async function login(
           id: user.id,
           email: user.email,
           displayName: user.displayName,
+          avatar: user.avatar,
           role: user.role,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
@@ -152,6 +154,7 @@ export async function getCurrentUser(
         id: true,
         email: true,
         displayName: true,
+        avatar: true,
         role: true,
         createdAt: true,
         updatedAt: true,
@@ -166,6 +169,80 @@ export async function getCurrentUser(
       success: true,
       data: user,
     })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function updateAvatar(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = req.userId
+    if (!userId) throw createError('未认证', 401)
+
+    const { avatar } = req.body
+
+    if (!avatar || !avatar.startsWith('data:image/')) {
+      throw createError('无效的图片格式', 400)
+    }
+
+    const sizeInBytes = Buffer.byteLength(avatar, 'utf8')
+    if (sizeInBytes > 512 * 1024) {
+      throw createError('图片大小不能超过 500KB', 400)
+    }
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { avatar },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        avatar: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    })
+
+    res.json({ success: true, data: user })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function changePassword(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) {
+      throw createError(errors.array()[0].msg, 400)
+    }
+
+    const userId = req.userId
+    if (!userId) throw createError('未认证', 401)
+
+    const { currentPassword, newPassword } = req.body
+
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user) throw createError('用户不存在', 404)
+
+    const isValid = await bcrypt.compare(currentPassword, user.passwordHash)
+    if (!isValid) throw createError('当前密码错误', 400)
+
+    const passwordHash = await bcrypt.hash(newPassword, 12)
+    await prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    })
+
+    res.json({ success: true, data: null })
   } catch (error) {
     next(error)
   }

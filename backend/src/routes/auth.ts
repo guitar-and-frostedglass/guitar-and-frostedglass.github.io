@@ -33,8 +33,19 @@ const loginValidation = [
     .withMessage('请输入密码'),
 ]
 
+const changePasswordValidation = [
+  body('currentPassword')
+    .notEmpty()
+    .withMessage('请输入当前密码'),
+  body('newPassword')
+    .isLength({ min: 6 })
+    .withMessage('新密码长度至少为6位'),
+]
+
 router.post('/register', registerValidation, authController.register)
 router.post('/login', loginValidation, authController.login)
 router.get('/me', authenticate, authController.getCurrentUser)
+router.put('/avatar', authenticate, authController.updateAvatar)
+router.put('/password', authenticate, changePasswordValidation, authController.changePassword)
 
 export default router

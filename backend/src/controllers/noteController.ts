@@ -17,7 +17,7 @@ export async function getNotes(
       orderBy: { createdAt: 'desc' },
       include: {
         user: {
-          select: { id: true, displayName: true },
+          select: { id: true, displayName: true, avatar: true },
         },
         _count: {
           select: { replies: true },
@@ -46,13 +46,13 @@ export async function getNote(
       where: { id: noteId },
       include: {
         user: {
-          select: { id: true, displayName: true },
+          select: { id: true, displayName: true, avatar: true },
         },
         replies: {
           orderBy: { createdAt: 'asc' },
           include: {
             user: {
-              select: { id: true, displayName: true },
+              select: { id: true, displayName: true, avatar: true },
             },
           },
         },
@@ -87,7 +87,7 @@ export async function createNote(
       data: { title, content, color, userId },
       include: {
         user: {
-          select: { id: true, displayName: true },
+          select: { id: true, displayName: true, avatar: true },
         },
         _count: {
           select: { replies: true },
@@ -135,7 +135,7 @@ export async function updateNote(
       },
       include: {
         user: {
-          select: { id: true, displayName: true },
+          select: { id: true, displayName: true, avatar: true },
         },
         _count: {
           select: { replies: true },
@@ -199,7 +199,7 @@ export async function createReply(
       data: { content, noteId, userId },
       include: {
         user: {
-          select: { id: true, displayName: true },
+          select: { id: true, displayName: true, avatar: true },
         },
       },
     })

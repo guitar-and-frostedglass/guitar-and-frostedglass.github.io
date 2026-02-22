@@ -3,6 +3,7 @@ export type NoteColor = 'yellow' | 'pink' | 'blue' | 'green' | 'purple' | 'orang
 export interface NoteUser {
   id: string
   displayName: string
+  avatar?: string | null
 }
 
 export interface Reply {

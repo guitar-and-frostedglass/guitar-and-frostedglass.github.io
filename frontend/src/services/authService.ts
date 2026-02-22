@@ -44,4 +44,20 @@ export const authService = {
   isAuthenticated(): boolean {
     return !!sessionStorage.getItem('token')
   },
+
+  async updateAvatar(avatar: string): Promise<AuthResponse['user']> {
+    const response = await api.put<ApiResponse<AuthResponse['user']>>('/auth/avatar', { avatar })
+    if (response.data.success && response.data.data) {
+      sessionStorage.setItem('user', JSON.stringify(response.data.data))
+      return response.data.data
+    }
+    throw new Error(response.data.error || '更新头像失败')
+  },
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const response = await api.put<ApiResponse<null>>('/auth/password', { currentPassword, newPassword })
+    if (!response.data.success) {
+      throw new Error(response.data.error || '修改密码失败')
+    }
+  },
 }

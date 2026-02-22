@@ -2,6 +2,7 @@ import { useNoteStore } from '../../stores/noteStore'
 import { useAuthStore } from '../../stores/authStore'
 import type { Note, NoteColor } from '../../../../shared/types'
 import { useState } from 'react'
+import UserAvatar from '../UserAvatar'
 
 interface NoteCardProps {
   note: Note
@@ -53,10 +54,12 @@ export default function NoteCard({ note }: NoteCardProps) {
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2 min-w-0">
-          <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${avatarColors[note.color]} 
-            flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
-            {note.user?.displayName?.[0]?.toUpperCase() || '?'}
-          </div>
+          <UserAvatar
+            displayName={note.user?.displayName}
+            avatar={note.user?.avatar}
+            size={28}
+            gradient={avatarColors[note.color]}
+          />
           <div className="min-w-0">
             <p className="text-xs font-medium text-gray-600 truncate">
               {note.user?.displayName || '匿名'}

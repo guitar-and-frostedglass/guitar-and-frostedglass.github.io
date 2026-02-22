@@ -19,6 +19,7 @@ model User {
   email        String   @unique
   passwordHash String   @map("password_hash")
   displayName  String   @map("display_name")
+  avatar       String?  @map("avatar") @db.Text
   role         Role     @default(USER)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
