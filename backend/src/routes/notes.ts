@@ -5,11 +5,14 @@ import { authenticate } from '../middleware/auth.js'
 
 const router = Router()
 
-// 所有便签路由都需要认证
 router.use(authenticate)
 
-// 创建便签验证规则
 const createValidation = [
+  body('title')
+    .optional()
+    .isString()
+    .isLength({ max: 100 })
+    .withMessage('标题最长100个字符'),
   body('content')
     .optional()
     .isString()
@@ -18,21 +21,15 @@ const createValidation = [
     .optional()
     .isIn(['yellow', 'pink', 'blue', 'green', 'purple', 'orange'])
     .withMessage('无效的颜色'),
-  body('positionX')
-    .optional()
-    .isInt({ min: 0 })
-    .withMessage('位置X必须是非负整数'),
-  body('positionY')
-    .optional()
-    .isInt({ min: 0 })
-    .withMessage('位置Y必须是非负整数'),
 ]
 
-// 更新便签验证规则
 const updateValidation = [
-  param('id')
-    .isUUID()
-    .withMessage('无效的便签ID'),
+  param('id').isUUID().withMessage('无效的便签ID'),
+  body('title')
+    .optional()
+    .isString()
+    .isLength({ max: 100 })
+    .withMessage('标题最长100个字符'),
   body('content')
     .optional()
     .isString()
@@ -41,34 +38,25 @@ const updateValidation = [
     .optional()
     .isIn(['yellow', 'pink', 'blue', 'green', 'purple', 'orange'])
     .withMessage('无效的颜色'),
-  body('positionX')
-    .optional()
-    .isInt({ min: 0 })
-    .withMessage('位置X必须是非负整数'),
-  body('positionY')
-    .optional()
-    .isInt({ min: 0 })
-    .withMessage('位置Y必须是非负整数'),
 ]
 
-// 删除便签验证规则
 const deleteValidation = [
-  param('id')
-    .isUUID()
-    .withMessage('无效的便签ID'),
+  param('id').isUUID().withMessage('无效的便签ID'),
 ]
 
-// 获取所有便签
+const replyValidation = [
+  param('id').isUUID().withMessage('无效的便签ID'),
+  body('content')
+    .trim()
+    .isLength({ min: 1 })
+    .withMessage('回复内容不能为空'),
+]
+
 router.get('/', noteController.getNotes)
-
-// 创建便签
+router.get('/:id', [param('id').isUUID().withMessage('无效的便签ID')], noteController.getNote)
 router.post('/', createValidation, noteController.createNote)
-
-// 更新便签
 router.put('/:id', updateValidation, noteController.updateNote)
-
-// 删除便签
 router.delete('/:id', deleteValidation, noteController.deleteNote)
+router.post('/:id/replies', replyValidation, noteController.createReply)
 
 export default router
-

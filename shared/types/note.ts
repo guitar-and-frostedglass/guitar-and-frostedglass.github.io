@@ -1,30 +1,51 @@
-// 便签相关类型定义
-
 export type NoteColor = 'yellow' | 'pink' | 'blue' | 'green' | 'purple' | 'orange'
+
+export interface NoteUser {
+  id: string
+  displayName: string
+}
+
+export interface Reply {
+  id: string
+  content: string
+  createdAt: string
+  updatedAt: string
+  noteId: string
+  userId: string
+  user: NoteUser
+}
 
 export interface Note {
   id: string
+  title: string
   content: string
   color: NoteColor
   positionX: number
   positionY: number
   userId: string
+  user: NoteUser
   createdAt: string
   updatedAt: string
+  _count?: {
+    replies: number
+  }
+  replies?: Reply[]
 }
 
 export interface CreateNoteRequest {
+  title: string
   content: string
   color?: NoteColor
-  positionX?: number
-  positionY?: number
 }
 
 export interface UpdateNoteRequest {
+  title?: string
   content?: string
   color?: NoteColor
-  positionX?: number
-  positionY?: number
+}
+
+export interface CreateReplyRequest {
+  content: string
 }
 
 export const NOTE_COLORS: { value: NoteColor; label: string; class: string }[] = [
@@ -35,4 +56,3 @@ export const NOTE_COLORS: { value: NoteColor; label: string; class: string }[] =
   { value: 'purple', label: '紫色', class: 'bg-note-purple' },
   { value: 'orange', label: '橙色', class: 'bg-note-orange' },
 ]
-

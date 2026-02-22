@@ -50,6 +50,8 @@ docker compose -f docker-compose.prod.yml exec api-prod npx prisma migrate deplo
 docker compose -f docker-compose.prod.yml exec api-dev npx prisma migrate deploy
 ```
 
+On startup, each API container automatically seeds an admin account (from `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `.env`) if no admin user exists in its database.
+
 ### SSL certificate renewal
 
 Certbot installs a systemd timer that auto-renews. To verify:
@@ -98,6 +100,8 @@ docker compose -f docker-compose.prod.yml exec postgres pg_dump -U postgres gfg_
 docker compose -f docker-compose.prod.yml exec postgres psql -U postgres -c "DROP DATABASE gfg_prod;"
 docker compose -f docker-compose.prod.yml exec postgres psql -U postgres -c "CREATE DATABASE gfg_prod;"
 docker compose -f docker-compose.prod.yml exec api-prod npx prisma migrate deploy
+# Restart api-prod so seedAdmin() runs again on the fresh DB
+docker compose -f docker-compose.prod.yml restart api-prod
 ```
 
 ### Local frontend development against dev API
@@ -106,6 +110,32 @@ docker compose -f docker-compose.prod.yml exec api-prod npx prisma migrate deplo
 cd frontend
 VITE_API_URL=https://gfg-api.duckdns.org/dev-api npm run dev
 ```
+
+---
+
+## User Registration Flow
+
+Registration is invite-only. The flow works as follows:
+
+1. **Admin logs in** to the web app (via email or display name + password)
+2. **Admin opens the admin panel** (管理后台) from the dropdown menu in the header
+3. **Admin generates an invite code** — each code is valid for **15 minutes** and can only be used once
+4. **Admin shares the code** with the person who needs to register (via chat, email, etc.)
+5. **The person opens the registration page**, enters the invite code along with their email, display name, and password
+6. **If the code is valid and not expired**, the account is created; otherwise registration is rejected
+
+### Admin account bootstrap
+
+On first startup, the API automatically creates an admin account using the `ADMIN_EMAIL` and `ADMIN_PASSWORD` environment variables (if no admin exists in the database). This happens independently for both `gfg_prod` and `gfg_dev` databases.
+
+After the initial admin is created, you can:
+- Log in as admin on the web app
+- Generate invite codes for other users
+- Promote other users to admin from the admin panel
+
+### Login
+
+Users can log in with **either their email or their display name** (plus password). The system auto-detects which one was provided based on whether the input contains `@`.
 
 ---
 
@@ -166,7 +196,12 @@ JWT_SECRET_PROD=$(openssl rand -base64 32)
 JWT_SECRET_DEV=$(openssl rand -base64 32)
 CORS_ORIGIN_PROD=https://guitar-and-frostedglass.github.io
 CORS_ORIGIN_DEV=https://guitar-and-frostedglass.github.io,http://localhost:3000
+ADMIN_EMAIL=your-admin@email.com
+ADMIN_PASSWORD=$(openssl rand -base64 16)
 EOF
+
+# IMPORTANT: note down the generated ADMIN_PASSWORD so you can log in later
+cat .env | grep ADMIN_PASSWORD
 ```
 
 ### 5. Start containers and migrate
@@ -176,6 +211,15 @@ docker compose -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.prod.yml exec api-prod npx prisma migrate deploy
 docker compose -f docker-compose.prod.yml exec api-dev npx prisma migrate deploy
 ```
+
+Verify the admin seed ran successfully:
+
+```bash
+docker compose -f docker-compose.prod.yml logs api-prod | grep Seed
+docker compose -f docker-compose.prod.yml logs api-dev | grep Seed
+```
+
+You should see `[Seed] 已创建管理员账号: your-admin@email.com`.
 
 ### 6. Configure Nginx
 
@@ -221,3 +265,12 @@ sudo certbot --nginx -d gfg-api.duckdns.org
 1. Repo Settings > Secrets and variables > Actions > Variables: add `API_URL` = `https://gfg-api.duckdns.org/api`
 2. Repo Settings > Pages: set source to GitHub Actions
 3. Push to `main` triggers frontend deploy via `.github/workflows/deploy-frontend.yml`
+
+### 8. First login and invite users
+
+1. Open `https://guitar-and-frostedglass.github.io/guitar-and-frostedglass-dev/login`
+2. Log in with the `ADMIN_EMAIL` and `ADMIN_PASSWORD` from step 4
+3. Click the user avatar dropdown > **管理后台**
+4. Go to the **邀请码** tab and click **生成邀请码**
+5. Copy the code and send it to the person you want to invite
+6. They have **15 minutes** to register at the `/register` page using the code

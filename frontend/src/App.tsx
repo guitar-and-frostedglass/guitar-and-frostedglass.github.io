@@ -3,8 +3,8 @@ import { useAuthStore } from './stores/authStore'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
+import Admin from './pages/Admin'
 
-// 受保护的路由组件
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
   
@@ -15,7 +15,20 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-// 公共路由（已登录用户重定向到主页）
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, user } = useAuthStore()
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+  
+  if (user?.role !== 'ADMIN') {
+    return <Navigate to="/" replace />
+  }
+  
+  return <>{children}</>
+}
+
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
   
@@ -54,6 +67,14 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        <Route 
+          path="/admin" 
+          element={
+            <AdminRoute>
+              <Admin />
+            </AdminRoute>
+          } 
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
@@ -61,4 +82,3 @@ function App() {
 }
 
 export default App
-

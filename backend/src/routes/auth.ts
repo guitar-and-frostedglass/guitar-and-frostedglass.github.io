@@ -5,7 +5,6 @@ import { authenticate } from '../middleware/auth.js'
 
 const router = Router()
 
-// 注册验证规则
 const registerValidation = [
   body('email')
     .isEmail()
@@ -18,27 +17,24 @@ const registerValidation = [
     .trim()
     .isLength({ min: 1, max: 50 })
     .withMessage('昵称长度为1-50个字符'),
+  body('inviteCode')
+    .trim()
+    .notEmpty()
+    .withMessage('请输入邀请码'),
 ]
 
-// 登录验证规则
 const loginValidation = [
-  body('email')
-    .isEmail()
-    .withMessage('请输入有效的邮箱地址')
-    .normalizeEmail(),
+  body('identifier')
+    .trim()
+    .notEmpty()
+    .withMessage('请输入邮箱或昵称'),
   body('password')
     .notEmpty()
     .withMessage('请输入密码'),
 ]
 
-// 注册
 router.post('/register', registerValidation, authController.register)
-
-// 登录
 router.post('/login', loginValidation, authController.login)
-
-// 获取当前用户信息
 router.get('/me', authenticate, authController.getCurrentUser)
 
 export default router
-

@@ -31,6 +31,8 @@ services:
       JWT_SECRET: ${JWT_SECRET_PROD:?Set JWT_SECRET_PROD in .env}
       JWT_EXPIRES_IN: 7d
       CORS_ORIGIN: ${CORS_ORIGIN_PROD:-https://guitar-and-frostedglass.github.io}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@gfg.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
     ports:
       - "4000:4000"
 
@@ -48,6 +50,8 @@ services:
       JWT_SECRET: ${JWT_SECRET_DEV:?Set JWT_SECRET_DEV in .env}
       JWT_EXPIRES_IN: 7d
       CORS_ORIGIN: "${CORS_ORIGIN_DEV:-https://guitar-and-frostedglass.github.io,http://localhost:3000}"
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@gfg.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
     ports:
       - "4001:4000"
 

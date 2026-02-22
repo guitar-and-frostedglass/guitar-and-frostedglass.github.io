@@ -6,22 +6,39 @@ import { prisma } from '../utils/prisma.js'
 import { createError } from '../middleware/errorHandler.js'
 import { AuthRequest } from '../middleware/auth.js'
 
-// 注册
 export async function register(
   req: Request,
   res: Response,
   next: NextFunction
 ) {
   try {
-    // 验证输入
     const errors = validationResult(req)
     if (!errors.isEmpty()) {
       throw createError(errors.array()[0].msg, 400)
     }
 
-    const { email, password, displayName } = req.body
+    const { email, password, displayName, inviteCode } = req.body
 
-    // 检查邮箱是否已存在
+    if (!inviteCode) {
+      throw createError('请输入邀请码', 400)
+    }
+
+    const invite = await prisma.inviteCode.findUnique({
+      where: { code: inviteCode },
+    })
+
+    if (!invite) {
+      throw createError('邀请码无效', 400)
+    }
+
+    if (invite.used) {
+      throw createError('邀请码已被使用', 400)
+    }
+
+    if (new Date() > invite.expiresAt) {
+      throw createError('邀请码已过期', 400)
+    }
+
     const existingUser = await prisma.user.findUnique({
       where: { email },
     })
@@ -30,72 +47,72 @@ export async function register(
       throw createError('该邮箱已被注册', 400)
     }
 
-    // 加密密码
     const passwordHash = await bcrypt.hash(password, 12)
 
-    // 创建用户
-    const user = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        displayName,
-      },
-      select: {
-        id: true,
-        email: true,
-        displayName: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+    const user = await prisma.$transaction(async (tx) => {
+      const newUser = await tx.user.create({
+        data: {
+          email,
+          passwordHash,
+          displayName,
+        },
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          role: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      })
+
+      await tx.inviteCode.update({
+        where: { id: invite.id },
+        data: { used: true, usedBy: newUser.id },
+      })
+
+      return newUser
     })
 
-    // 生成 JWT
     const token = generateToken(user.id)
 
     res.status(201).json({
       success: true,
-      data: {
-        user,
-        token,
-      },
+      data: { user, token },
     })
   } catch (error) {
     next(error)
   }
 }
 
-// 登录
 export async function login(
   req: Request,
   res: Response,
   next: NextFunction
 ) {
   try {
-    // 验证输入
     const errors = validationResult(req)
     if (!errors.isEmpty()) {
       throw createError(errors.array()[0].msg, 400)
     }
 
-    const { email, password } = req.body
+    const { identifier, password } = req.body
 
-    // 查找用户
-    const user = await prisma.user.findUnique({
-      where: { email },
-    })
+    const isEmail = identifier.includes('@')
+    const user = isEmail
+      ? await prisma.user.findUnique({ where: { email: identifier } })
+      : await prisma.user.findFirst({ where: { displayName: identifier } })
 
     if (!user) {
-      throw createError('邮箱或密码错误', 401)
+      throw createError('账号或密码错误', 401)
     }
 
-    // 验证密码
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash)
 
     if (!isPasswordValid) {
-      throw createError('邮箱或密码错误', 401)
+      throw createError('账号或密码错误', 401)
     }
 
-    // 生成 JWT
     const token = generateToken(user.id)
 
     res.json({
@@ -105,6 +122,7 @@ export async function login(
           id: user.id,
           email: user.email,
           displayName: user.displayName,
+          role: user.role,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         },
@@ -116,7 +134,6 @@ export async function login(
   }
 }
 
-// 获取当前用户信息
 export async function getCurrentUser(
   req: AuthRequest,
   res: Response,
@@ -135,6 +152,7 @@ export async function getCurrentUser(
         id: true,
         email: true,
         displayName: true,
+        role: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -153,7 +171,6 @@ export async function getCurrentUser(
   }
 }
 
-// 生成 JWT Token
 function generateToken(userId: string): string {
   const secret = process.env.JWT_SECRET
 
@@ -168,3 +185,37 @@ function generateToken(userId: string): string {
   )
 }
 
+/**
+ * Seeds the initial admin user on startup if no admin exists.
+ * Reads ADMIN_EMAIL / ADMIN_PASSWORD from env.
+ */
+export async function seedAdmin() {
+  const email = process.env.ADMIN_EMAIL
+  const password = process.env.ADMIN_PASSWORD
+
+  if (!email || !password) return
+
+  const adminExists = await prisma.user.findFirst({ where: { role: 'ADMIN' } })
+  if (adminExists) return
+
+  const existing = await prisma.user.findUnique({ where: { email } })
+  if (existing) {
+    await prisma.user.update({
+      where: { email },
+      data: { role: 'ADMIN' },
+    })
+    console.log(`[Seed] 已将 ${email} 升级为管理员`)
+    return
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12)
+  await prisma.user.create({
+    data: {
+      email,
+      passwordHash,
+      displayName: 'Admin',
+      role: 'ADMIN',
+    },
+  })
+  console.log(`[Seed] 已创建管理员账号: ${email}`)
+}

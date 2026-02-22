@@ -7,8 +7,7 @@ interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
   error: string | null
-  
-  // Actions
+
   login: (data: LoginRequest) => Promise<void>
   register: (data: RegisterRequest) => Promise<void>
   logout: () => void
@@ -26,10 +25,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null })
     try {
       const response = await authService.login(data)
-      set({ 
-        user: response.user, 
-        isAuthenticated: true, 
-        isLoading: false 
+      set({
+        user: response.user,
+        isAuthenticated: true,
+        isLoading: false,
       })
     } catch (error) {
       const message = error instanceof Error ? error.message : '登录失败'
@@ -42,10 +41,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null })
     try {
       const response = await authService.register(data)
-      set({ 
-        user: response.user, 
-        isAuthenticated: true, 
-        isLoading: false 
+      set({
+        user: response.user,
+        isAuthenticated: true,
+        isLoading: false,
       })
     } catch (error) {
       const message = error instanceof Error ? error.message : '注册失败'
@@ -70,6 +69,4 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 }))
 
-// 初始化认证状态
 useAuthStore.getState().initAuth()
-

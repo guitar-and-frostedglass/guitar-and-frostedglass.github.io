@@ -78,10 +78,22 @@ All managed via `docker-compose.prod.yml` in `~/guitar-and-frostedglass-dev/back
 | `JWT_SECRET_DEV` | api-dev | JWT signing key for dev (separate so tokens can't cross environments) |
 | `CORS_ORIGIN_PROD` | api-prod | Allowed CORS origin (GitHub Pages URL) |
 | `CORS_ORIGIN_DEV` | api-dev | Allowed CORS origins (GitHub Pages + localhost, comma-separated) |
+| `ADMIN_EMAIL` | api-prod, api-dev | Email for the initial admin account (seeded on first startup) |
+| `ADMIN_PASSWORD` | api-prod, api-dev | Password for the initial admin account (bcrypt-hashed before storing) |
 
 ### Database initialization
 
 On first start, `init-db.sh` is mounted into the PostgreSQL container at `/docker-entrypoint-initdb.d/`. It creates both `gfg_dev` and `gfg_prod` databases. This only runs when the `postgres_data` volume is empty (first boot).
+
+### Admin seed
+
+On each API container startup, `seedAdmin()` runs automatically:
+- If no user with role `ADMIN` exists in the database, it creates one using `ADMIN_EMAIL` / `ADMIN_PASSWORD`
+- If a user with that email already exists but isn't an admin, it promotes them
+- If an admin already exists, it does nothing
+- The password is bcrypt-hashed (cost factor 12) before storing — it is never saved in plain text
+
+Both `api-prod` and `api-dev` seed independently into their own databases.
 
 ### Volume
 
@@ -120,16 +132,23 @@ Certbot auto-modified the nginx config to add the `listen 443 ssl` block and red
 
 ### API routes
 
-| Method | Path | Auth | Purpose |
-|--------|------|------|---------|
-| GET | `/health` | No | Health check (note: NOT under /api/) |
-| POST | `/api/auth/register` | No | Create account |
-| POST | `/api/auth/login` | No | Login, returns JWT |
-| GET | `/api/auth/me` | Yes | Get current user profile |
-| GET | `/api/notes` | Yes | List user's notes |
-| POST | `/api/notes` | Yes | Create note |
-| PUT | `/api/notes/:id` | Yes | Update note |
-| DELETE | `/api/notes/:id` | Yes | Delete note |
+| Method | Path | Auth | Admin | Purpose |
+|--------|------|------|-------|---------|
+| GET | `/health` | No | No | Health check (NOT under /api/) |
+| POST | `/api/auth/register` | No | No | Register (requires valid invite code) |
+| POST | `/api/auth/login` | No | No | Login by email or display name |
+| GET | `/api/auth/me` | Yes | No | Get current user profile |
+| GET | `/api/notes` | Yes | No | List all notes (all users, with reply counts) |
+| GET | `/api/notes/:id` | Yes | No | Get single note with all replies |
+| POST | `/api/notes` | Yes | No | Create note (title + content + color) |
+| PUT | `/api/notes/:id` | Yes | No | Update own note |
+| DELETE | `/api/notes/:id` | Yes | No | Delete own note |
+| POST | `/api/notes/:id/replies` | Yes | No | Reply to any note |
+| GET | `/api/admin/users` | Yes | Yes | List all registered users |
+| DELETE | `/api/admin/users/:id` | Yes | Yes | Delete a user |
+| PUT | `/api/admin/users/:id/role` | Yes | Yes | Change user role (USER/ADMIN) |
+| POST | `/api/admin/invite-codes` | Yes | Yes | Generate an invite code (15 min expiry) |
+| GET | `/api/admin/invite-codes` | Yes | Yes | List all invite codes |
 
 ### Database schema
 
@@ -138,15 +157,33 @@ Certbot auto-modified the nginx config to add the `listen 443 ssl` block and red
 - `email` (unique)
 - `password_hash`
 - `display_name`
+- `role` (enum: `USER`, `ADMIN`, default `USER`)
 - `created_at`, `updated_at`
 
 **notes** table:
 - `id` (UUID, PK)
-- `content` (text)
+- `title` (text, default "")
+- `content` (text, default "")
 - `color` (string, default "yellow")
-- `position_x`, `position_y` (int)
+- `position_x`, `position_y` (int, legacy — unused in current UI)
 - `user_id` (FK → users.id, cascade delete)
 - `created_at`, `updated_at`
+
+**replies** table:
+- `id` (UUID, PK)
+- `content` (text)
+- `note_id` (FK → notes.id, cascade delete)
+- `user_id` (FK → users.id, cascade delete)
+- `created_at`, `updated_at`
+
+**invite_codes** table:
+- `id` (UUID, PK)
+- `code` (unique, 8-char hex string)
+- `expires_at` (timestamp, 15 minutes after creation)
+- `used` (boolean, default false)
+- `used_by` (nullable, UUID of the user who used it)
+- `creator_id` (FK → users.id, cascade delete)
+- `created_at`
 
 Managed via Prisma migrations in `backend/prisma/migrations/`.
 
@@ -159,6 +196,15 @@ Managed via Prisma migrations in `backend/prisma/migrations/`.
 - Zustand (state management)
 - React Router DOM 6
 - Axios (HTTP client)
+
+### Pages
+
+| Route | Access | Description |
+|-------|--------|-------------|
+| `/login` | Public | Login by email or display name |
+| `/register` | Public | Register with invite code |
+| `/` | Authenticated | Dashboard — shared note board with chat threads |
+| `/admin` | Admin only | User management + invite code generation |
 
 ### Build configuration
 
@@ -179,7 +225,7 @@ The two databases are completely independent:
 - **gfg_dev**: used by the dev API (`/dev-api`). All testing happens here.
 - **gfg_prod**: used by the prod API (`/api`). Only real user data.
 
-They share the same schema (both receive Prisma migrations), but different JWT secrets prevent tokens from working across environments.
+They share the same schema (both receive Prisma migrations), but different JWT secrets prevent tokens from working across environments. Each database has its own admin user seeded independently.
 
 ### Workflow
 

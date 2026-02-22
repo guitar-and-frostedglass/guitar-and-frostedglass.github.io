@@ -7,7 +7,7 @@ export default function Login() {
   const { login, isLoading, error, clearError } = useAuthStore()
   
   const [formData, setFormData] = useState({
-    email: '',
+    identifier: '',
     password: '',
   })
 
@@ -46,22 +46,21 @@ export default function Login() {
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email */}
             <div>
               <label 
-                htmlFor="email" 
+                htmlFor="identifier" 
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                邮箱
+                邮箱或昵称
               </label>
               <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
+                type="text"
+                id="identifier"
+                name="identifier"
+                value={formData.identifier}
                 onChange={handleChange}
                 required
-                placeholder="your@email.com"
+                placeholder="邮箱或昵称"
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 
                   focus:border-primary-400 focus:ring-2 focus:ring-primary-100 
                   transition-all duration-200 bg-white/50"

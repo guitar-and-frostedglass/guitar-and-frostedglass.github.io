@@ -1,15 +1,23 @@
-// 用户相关类型定义
+export type UserRole = 'USER' | 'ADMIN'
 
 export interface User {
   id: string
   email: string
   displayName: string
+  role: UserRole
   createdAt: string
   updatedAt: string
 }
 
+export interface AdminUser extends User {
+  _count?: {
+    notes: number
+    replies: number
+  }
+}
+
 export interface LoginRequest {
-  email: string
+  identifier: string
   password: string
 }
 
@@ -17,6 +25,7 @@ export interface RegisterRequest {
   email: string
   password: string
   displayName: string
+  inviteCode: string
 }
 
 export interface AuthResponse {
@@ -30,3 +39,14 @@ export interface ApiResponse<T> {
   error?: string
 }
 
+export interface InviteCode {
+  id: string
+  code: string
+  expiresAt: string
+  used: boolean
+  usedBy: string | null
+  createdAt: string
+  creator?: {
+    displayName: string
+  }
+}

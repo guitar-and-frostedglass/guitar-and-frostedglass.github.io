@@ -11,6 +11,7 @@ export default function Register() {
     displayName: '',
     password: '',
     confirmPassword: '',
+    inviteCode: '',
   })
   const [validationError, setValidationError] = useState('')
 
@@ -24,7 +25,6 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // 验证密码
     if (formData.password !== formData.confirmPassword) {
       setValidationError('两次输入的密码不一致')
       return
@@ -35,11 +35,17 @@ export default function Register() {
       return
     }
 
+    if (!formData.inviteCode.trim()) {
+      setValidationError('请输入邀请码')
+      return
+    }
+
     try {
       await register({
         email: formData.email,
         displayName: formData.displayName,
         password: formData.password,
+        inviteCode: formData.inviteCode.trim(),
       })
       navigate('/')
     } catch {
@@ -52,7 +58,6 @@ export default function Register() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
-        {/* Logo & Title */}
         <div className="text-center mb-8">
           <div className="text-6xl mb-4">🎸</div>
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
@@ -61,14 +66,34 @@ export default function Register() {
           <p className="text-gray-600">创建账号，开始记录</p>
         </div>
 
-        {/* Register Form */}
         <div className="glass rounded-2xl p-8 shadow-lg">
           <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
             注册
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Display Name */}
+            <div>
+              <label 
+                htmlFor="inviteCode" 
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                邀请码
+              </label>
+              <input
+                type="text"
+                id="inviteCode"
+                name="inviteCode"
+                value={formData.inviteCode}
+                onChange={handleChange}
+                required
+                placeholder="请输入邀请码"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 
+                  focus:border-primary-400 focus:ring-2 focus:ring-primary-100 
+                  transition-all duration-200 bg-white/50 font-mono tracking-widest text-center text-lg"
+              />
+              <p className="text-xs text-gray-400 mt-1">邀请码有效期15分钟，请尽快完成注册</p>
+            </div>
+
             <div>
               <label 
                 htmlFor="displayName" 
@@ -90,7 +115,6 @@ export default function Register() {
               />
             </div>
 
-            {/* Email */}
             <div>
               <label 
                 htmlFor="email" 
@@ -112,7 +136,6 @@ export default function Register() {
               />
             </div>
 
-            {/* Password */}
             <div>
               <label 
                 htmlFor="password" 
@@ -134,7 +157,6 @@ export default function Register() {
               />
             </div>
 
-            {/* Confirm Password */}
             <div>
               <label 
                 htmlFor="confirmPassword" 
@@ -156,14 +178,12 @@ export default function Register() {
               />
             </div>
 
-            {/* Error Message */}
             {displayError && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-sm text-red-600">{displayError}</p>
               </div>
             )}
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={isLoading}
@@ -198,7 +218,6 @@ export default function Register() {
             </button>
           </form>
 
-          {/* Login Link */}
           <div className="mt-6 text-center">
             <p className="text-gray-600">
               已有账号？{' '}
@@ -215,4 +234,3 @@ export default function Register() {
     </div>
   )
 }
-

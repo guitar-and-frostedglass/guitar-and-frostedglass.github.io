@@ -1,23 +1,27 @@
 import { create } from 'zustand'
 import { noteService } from '../services/noteService'
-import type { Note, CreateNoteRequest, UpdateNoteRequest } from '../../../shared/types'
+import type { Note, Reply, CreateNoteRequest, UpdateNoteRequest } from '../../../shared/types'
 
 interface NoteState {
   notes: Note[]
+  activeNote: Note | null
   isLoading: boolean
   error: string | null
-  
-  // Actions
+
   fetchNotes: () => Promise<void>
+  fetchNote: (id: string) => Promise<void>
   createNote: (data: CreateNoteRequest) => Promise<Note>
   updateNote: (id: string, data: UpdateNoteRequest) => Promise<void>
   deleteNote: (id: string) => Promise<void>
+  createReply: (noteId: string, content: string) => Promise<Reply>
+  setActiveNote: (note: Note | null) => void
   clearError: () => void
   clearNotes: () => void
 }
 
-export const useNoteStore = create<NoteState>((set, _get) => ({
+export const useNoteStore = create<NoteState>((set, get) => ({
   notes: [],
+  activeNote: null,
   isLoading: false,
   error: null,
 
@@ -32,13 +36,23 @@ export const useNoteStore = create<NoteState>((set, _get) => ({
     }
   },
 
+  fetchNote: async (id: string) => {
+    try {
+      const note = await noteService.getNote(id)
+      set({ activeNote: note })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '获取便签详情失败'
+      set({ error: message })
+    }
+  },
+
   createNote: async (data: CreateNoteRequest) => {
     set({ isLoading: true, error: null })
     try {
       const note = await noteService.createNote(data)
-      set((state) => ({ 
-        notes: [...state.notes, note], 
-        isLoading: false 
+      set((state) => ({
+        notes: [note, ...state.notes],
+        isLoading: false,
       }))
       return note
     } catch (error) {
@@ -52,7 +66,7 @@ export const useNoteStore = create<NoteState>((set, _get) => ({
     try {
       const updatedNote = await noteService.updateNote(id, data)
       set((state) => ({
-        notes: state.notes.map((note) => 
+        notes: state.notes.map((note) =>
           note.id === id ? updatedNote : note
         ),
       }))
@@ -68,6 +82,7 @@ export const useNoteStore = create<NoteState>((set, _get) => ({
       await noteService.deleteNote(id)
       set((state) => ({
         notes: state.notes.filter((note) => note.id !== id),
+        activeNote: state.activeNote?.id === id ? null : state.activeNote,
       }))
     } catch (error) {
       const message = error instanceof Error ? error.message : '删除便签失败'
@@ -76,12 +91,42 @@ export const useNoteStore = create<NoteState>((set, _get) => ({
     }
   },
 
+  createReply: async (noteId: string, content: string) => {
+    try {
+      const reply = await noteService.createReply(noteId, { content })
+      const { activeNote } = get()
+      if (activeNote && activeNote.id === noteId && activeNote.replies) {
+        set({
+          activeNote: {
+            ...activeNote,
+            replies: [...activeNote.replies, reply],
+          },
+        })
+      }
+      set((state) => ({
+        notes: state.notes.map((note) =>
+          note.id === noteId
+            ? { ...note, _count: { replies: (note._count?.replies ?? 0) + 1 } }
+            : note
+        ),
+      }))
+      return reply
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '回复失败'
+      set({ error: message })
+      throw error
+    }
+  },
+
+  setActiveNote: (note: Note | null) => {
+    set({ activeNote: note })
+  },
+
   clearError: () => {
     set({ error: null })
   },
 
   clearNotes: () => {
-    set({ notes: [], error: null })
+    set({ notes: [], activeNote: null, error: null })
   },
 }))
-

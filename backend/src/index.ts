@@ -6,15 +6,15 @@ import dotenv from 'dotenv'
 
 import authRoutes from './routes/auth.js'
 import noteRoutes from './routes/notes.js'
+import adminRoutes from './routes/admin.js'
 import { errorHandler } from './middleware/errorHandler.js'
+import { seedAdmin } from './controllers/authController.js'
 
-// 加载环境变量
 dotenv.config()
 
 const app = express()
 const PORT = process.env.PORT || 4000
 
-// 中间件
 app.use(helmet())
 const corsOriginEnv = process.env.CORS_ORIGIN || 'http://localhost:3000'
 const corsOrigins = corsOriginEnv.includes(',')
@@ -28,27 +28,27 @@ app.use(cors({
 app.use(morgan('dev'))
 app.use(express.json())
 
-// 健康检查
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
-// API 路由
 app.use('/api/auth', authRoutes)
 app.use('/api/notes', noteRoutes)
+app.use('/api/admin', adminRoutes)
 
-// 404 处理
 app.use((_req, res) => {
   res.status(404).json({ success: false, error: '接口不存在' })
 })
 
-// 错误处理
 app.use(errorHandler)
 
-// 启动服务器
-app.listen(PORT, () => {
-  console.log(`🎸 Guitar & Frosted Glass API 运行在 http://localhost:${PORT}`)
-})
+async function start() {
+  await seedAdmin()
+  app.listen(PORT, () => {
+    console.log(`🎸 Guitar & Frosted Glass API 运行在 http://localhost:${PORT}`)
+  })
+}
+
+start().catch(console.error)
 
 export default app
-

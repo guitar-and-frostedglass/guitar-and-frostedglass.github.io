@@ -9,24 +9,44 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 用户表
+enum Role {
+  USER
+  ADMIN
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
   passwordHash String   @map("password_hash")
   displayName  String   @map("display_name")
+  role         Role     @default(USER)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  // 关联
-  notes Note[]
+  notes       Note[]
+  replies     Reply[]
+  inviteCodes InviteCode[]
 
   @@map("users")
 }
 
-// 便签表
+model InviteCode {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  usedBy    String?  @map("used_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  creatorId String @map("creator_id")
+  creator   User   @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@map("invite_codes")
+}
+
 model Note {
   id        String   @id @default(uuid())
+  title     String   @default("")
   content   String   @default("")
   color     String   @default("yellow")
   positionX Int      @default(50) @map("position_x")
@@ -34,10 +54,24 @@ model Note {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  // 关联
-  userId String @map("user_id")
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String  @map("user_id")
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replies Reply[]
 
   @@map("notes")
 }
 
+model Reply {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  noteId String @map("note_id")
+  note   Note   @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("replies")
+}
