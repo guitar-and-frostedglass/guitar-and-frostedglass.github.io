@@ -145,43 +145,34 @@ export async function updateNote(
     const currentUser = await prisma.user.findUnique({ where: { id: userId } })
     if (!currentUser) throw createError('用户不存在', 404)
 
-    const operations: Parameters<typeof prisma.$transaction>[0] = []
-
     if (shouldSaveHistory) {
-      operations.push(
-        prisma.noteEditHistory.create({
-          data: {
-            noteId,
-            title: existingNote.title,
-            content: existingNote.content,
-            editedById: userId,
-            editedByName: currentUser.displayName,
-          },
-        })
-      )
-    }
-
-    operations.push(
-      prisma.note.update({
-        where: { id: noteId },
+      await prisma.noteEditHistory.create({
         data: {
-          ...(title !== undefined && { title }),
-          ...(content !== undefined && { content }),
-          ...(color !== undefined && { color }),
-        },
-        include: {
-          user: {
-            select: { id: true, displayName: true, avatar: true },
-          },
-          _count: {
-            select: { replies: true },
-          },
+          noteId,
+          title: existingNote.title,
+          content: existingNote.content,
+          editedById: userId,
+          editedByName: currentUser.displayName,
         },
       })
-    )
+    }
 
-    const results = await prisma.$transaction(operations)
-    const note = results[results.length - 1]
+    const note = await prisma.note.update({
+      where: { id: noteId },
+      data: {
+        ...(title !== undefined && { title }),
+        ...(content !== undefined && { content }),
+        ...(color !== undefined && { color }),
+      },
+      include: {
+        user: {
+          select: { id: true, displayName: true, avatar: true },
+        },
+        _count: {
+          select: { replies: true },
+        },
+      },
+    })
 
     res.json({ success: true, data: note })
   } catch (error) {
