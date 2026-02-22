@@ -80,6 +80,12 @@ All managed via `docker-compose.prod.yml` in `~/guitar-and-frostedglass-dev/back
 | `CORS_ORIGIN_DEV` | api-dev | Allowed CORS origins (GitHub Pages + localhost, comma-separated) |
 | `ADMIN_EMAIL` | api-prod, api-dev | Email for the initial admin account (seeded on first startup) |
 | `ADMIN_PASSWORD` | api-prod, api-dev | Password for the initial admin account (bcrypt-hashed before storing) |
+| `SMTP_HOST` | api-prod, api-dev | SMTP server hostname (e.g. `smtp.gmail.com`). Optional — email features disabled if unset |
+| `SMTP_PORT` | api-prod, api-dev | SMTP port (default `587`) |
+| `SMTP_USER` | api-prod, api-dev | SMTP login username (e.g. Gmail address) |
+| `SMTP_PASS` | api-prod, api-dev | SMTP login password (e.g. Gmail App Password) |
+| `SMTP_FROM` | api-prod, api-dev | Sender display in emails (e.g. `"Guitar & Frosted Glass <email>"`) |
+| `FRONTEND_URL` | api-prod, api-dev | Frontend base URL for links in emails (default `https://guitar-and-frostedglass.github.io`) |
 
 ### Database initialization
 
@@ -94,6 +100,17 @@ On each API container startup, `seedAdmin()` runs automatically:
 - The password is bcrypt-hashed (cost factor 12) before storing — it is never saved in plain text
 
 Both `api-prod` and `api-dev` seed independently into their own databases.
+
+### Invite email (optional)
+
+When an admin generates an invite code, they can optionally provide a recipient email address. If SMTP is configured (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`), the backend sends an HTML email containing:
+- The 8-character invite code
+- A direct registration link (`FRONTEND_URL/register?code=XXXXXXXX`)
+- Expiration notice (15 minutes)
+
+If SMTP is not configured, the feature is silently disabled — invite codes are still generated and must be shared manually. Email sending failures do not block invite code creation; the API response includes an `emailSent` boolean so the frontend can show appropriate feedback.
+
+Uses nodemailer with SMTP transport. For Gmail, requires a Google App Password (2-Step Verification must be enabled on the Google account).
 
 ### Volume
 
@@ -128,6 +145,7 @@ Certbot auto-modified the nginx config to add the `listen 443 ssl` block and red
 - ORM: Prisma 5.x with PostgreSQL
 - Auth: JWT (jsonwebtoken) + bcryptjs
 - Validation: express-validator
+- Email: nodemailer (SMTP, optional)
 - Security: helmet, cors
 
 ### API routes
@@ -147,7 +165,7 @@ Certbot auto-modified the nginx config to add the `listen 443 ssl` block and red
 | GET | `/api/admin/users` | Yes | Yes | List all registered users |
 | DELETE | `/api/admin/users/:id` | Yes | Yes | Delete a user |
 | PUT | `/api/admin/users/:id/role` | Yes | Yes | Change user role (USER/ADMIN) |
-| POST | `/api/admin/invite-codes` | Yes | Yes | Generate an invite code (15 min expiry) |
+| POST | `/api/admin/invite-codes` | Yes | Yes | Generate an invite code (15 min expiry); optionally sends invite email if `email` is provided in body |
 | GET | `/api/admin/invite-codes` | Yes | Yes | List all invite codes |
 
 ### Database schema
@@ -202,7 +220,7 @@ Managed via Prisma migrations in `backend/prisma/migrations/`. Migration files a
 | Route | Access | Description |
 |-------|--------|-------------|
 | `/login` | Public | Login by email or display name |
-| `/register` | Public | Register with invite code |
+| `/register` | Public | Register with invite code (auto-fills from `?code=` query param) |
 | `/` | Authenticated | Dashboard — shared note board with chat threads |
 | `/admin` | Admin only | User management + invite code generation |
 
