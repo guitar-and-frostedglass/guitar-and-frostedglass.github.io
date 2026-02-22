@@ -93,3 +93,20 @@ model DeletedReply {
 
   @@map("deleted_replies")
 }
+
+model DeletedNote {
+  id             String   @id @default(uuid())
+  originalNoteId String   @map("original_note_id")
+  title          String   @default("")
+  content        String   @default("")
+  color          String   @default("yellow")
+  noteUserId     String   @map("note_user_id")
+  noteUserName   String   @map("note_user_name")
+  replies        Json     @default("[]")
+  deletedById    String   @map("deleted_by_id")
+  deletedByName  String   @map("deleted_by_name")
+  noteCreatedAt  DateTime @map("note_created_at")
+  deletedAt      DateTime @default(now()) @map("deleted_at")
+
+  @@map("deleted_notes")
+}

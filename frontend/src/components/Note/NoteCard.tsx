@@ -31,6 +31,8 @@ export default function NoteCard({ note }: NoteCardProps) {
   const { user } = useAuthStore()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const isOwner = user?.id === note.userId
+  const isAdmin = user?.role === 'ADMIN'
+  const canDelete = isOwner || isAdmin
   const unread = isNoteUnread(note.id)
 
   const handleClick = async () => {
@@ -70,11 +72,11 @@ export default function NoteCard({ note }: NoteCardProps) {
           </div>
         </div>
 
-        {isOwner && (
+        {canDelete && (
           <button
             onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true) }}
             className="p-1 hover:bg-black/5 rounded transition-colors flex-shrink-0"
-            title="删除"
+            title={isOwner ? '删除' : '管理员删除'}
           >
             <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}

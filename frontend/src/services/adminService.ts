@@ -1,5 +1,5 @@
 import api from './api'
-import type { AdminUser, InviteCode, DeletedReply, ApiResponse } from '../../../shared/types'
+import type { AdminUser, InviteCode, DeletedReply, DeletedNote, ApiResponse } from '../../../shared/types'
 
 export const adminService = {
   async getUsers(): Promise<AdminUser[]> {
@@ -50,5 +50,27 @@ export const adminService = {
       return response.data.data
     }
     throw new Error(response.data.error || '获取删除记录失败')
+  },
+
+  async getDeletedNotes(): Promise<DeletedNote[]> {
+    const response = await api.get<ApiResponse<DeletedNote[]>>('/admin/deleted-notes')
+    if (response.data.success && response.data.data) {
+      return response.data.data
+    }
+    throw new Error(response.data.error || '获取便签删除记录失败')
+  },
+
+  async restoreNote(id: string): Promise<void> {
+    const response = await api.post<ApiResponse<void>>(`/admin/deleted-notes/${id}/restore`)
+    if (!response.data.success) {
+      throw new Error(response.data.error || '恢复便签失败')
+    }
+  },
+
+  async permanentlyDeleteNote(id: string): Promise<void> {
+    const response = await api.delete<ApiResponse<void>>(`/admin/deleted-notes/${id}`)
+    if (!response.data.success) {
+      throw new Error(response.data.error || '彻底删除失败')
+    }
   },
 }

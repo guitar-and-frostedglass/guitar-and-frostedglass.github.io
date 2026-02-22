@@ -64,6 +64,29 @@ export interface DeletedReply {
   deletedAt: string
 }
 
+export interface DeletedNoteReplySnapshot {
+  id: string
+  content: string
+  userId: string
+  userName: string
+  createdAt: string
+}
+
+export interface DeletedNote {
+  id: string
+  originalNoteId: string
+  title: string
+  content: string
+  color: string
+  noteUserId: string
+  noteUserName: string
+  replies: DeletedNoteReplySnapshot[]
+  deletedById: string
+  deletedByName: string
+  noteCreatedAt: string
+  deletedAt: string
+}
+
 export const NOTE_COLORS: { value: NoteColor; label: string; class: string }[] = [
   { value: 'yellow', label: '黄色', class: 'bg-note-yellow' },
   { value: 'pink', label: '粉色', class: 'bg-note-pink' },

@@ -33,4 +33,16 @@ router.post(
 router.get('/invite-codes', adminController.getInviteCodes)
 router.get('/deleted-replies', adminController.getDeletedReplies)
 
+router.get('/deleted-notes', adminController.getDeletedNotes)
+router.post(
+  '/deleted-notes/:id/restore',
+  [param('id').isUUID().withMessage('无效的记录ID')],
+  adminController.restoreNote
+)
+router.delete(
+  '/deleted-notes/:id',
+  [param('id').isUUID().withMessage('无效的记录ID')],
+  adminController.permanentlyDeleteNote
+)
+
 export default router

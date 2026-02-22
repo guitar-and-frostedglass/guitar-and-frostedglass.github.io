@@ -171,3 +171,113 @@ export async function getDeletedReplies(
     next(error)
   }
 }
+
+export async function getDeletedNotes(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const deletedNotes = await prisma.deletedNote.findMany({
+      orderBy: { deletedAt: 'desc' },
+      take: 100,
+    })
+
+    res.json({ success: true, data: deletedNotes })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function restoreNote(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const { id } = req.params
+
+    const deletedNote = await prisma.deletedNote.findUnique({ where: { id } })
+    if (!deletedNote) throw createError('删除记录不存在', 404)
+
+    const ownerExists = await prisma.user.findUnique({
+      where: { id: deletedNote.noteUserId },
+    })
+    if (!ownerExists) throw createError('原作者账号已不存在，无法恢复', 400)
+
+    const repliesData = deletedNote.replies as Array<{
+      id: string
+      content: string
+      userId: string
+      createdAt: string
+    }>
+
+    const existingUserIds = new Set(
+      (
+        await prisma.user.findMany({
+          where: { id: { in: repliesData.map((r) => r.userId) } },
+          select: { id: true },
+        })
+      ).map((u) => u.id)
+    )
+    const restorableReplies = repliesData.filter((r) =>
+      existingUserIds.has(r.userId)
+    )
+
+    await prisma.$transaction(async (tx) => {
+      const note = await tx.note.create({
+        data: {
+          id: deletedNote.originalNoteId,
+          title: deletedNote.title,
+          content: deletedNote.content,
+          color: deletedNote.color,
+          userId: deletedNote.noteUserId,
+          createdAt: deletedNote.noteCreatedAt,
+          lastActivityAt:
+            restorableReplies.length > 0
+              ? new Date(
+                  restorableReplies[restorableReplies.length - 1].createdAt
+                )
+              : deletedNote.noteCreatedAt,
+        },
+      })
+
+      if (restorableReplies.length > 0) {
+        await tx.reply.createMany({
+          data: restorableReplies.map((r) => ({
+            id: r.id,
+            content: r.content,
+            noteId: note.id,
+            userId: r.userId,
+            createdAt: new Date(r.createdAt),
+          })),
+        })
+      }
+
+      await tx.deletedNote.delete({ where: { id } })
+    })
+
+    res.json({ success: true, data: null })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function permanentlyDeleteNote(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const { id } = req.params
+
+    const deletedNote = await prisma.deletedNote.findUnique({ where: { id } })
+    if (!deletedNote) throw createError('删除记录不存在', 404)
+
+    await prisma.deletedNote.delete({ where: { id } })
+
+    res.json({ success: true, data: null })
+  } catch (error) {
+    next(error)
+  }
+}

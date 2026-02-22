@@ -159,15 +159,54 @@ export async function deleteNote(
     const noteId = req.params.id
     if (!userId) throw createError('未认证', 401)
 
-    const existingNote = await prisma.note.findFirst({
-      where: { id: noteId, userId },
+    const currentUser = await prisma.user.findUnique({ where: { id: userId } })
+    if (!currentUser) throw createError('用户不存在', 404)
+
+    const isAdmin = currentUser.role === 'ADMIN'
+
+    const existingNote = await prisma.note.findUnique({
+      where: { id: noteId },
+      include: {
+        user: { select: { id: true, displayName: true } },
+        replies: {
+          include: {
+            user: { select: { id: true, displayName: true } },
+          },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
     })
 
-    if (!existingNote) {
-      throw createError('便签不存在或无权删除', 404)
+    if (!existingNote) throw createError('便签不存在', 404)
+    if (existingNote.userId !== userId && !isAdmin) {
+      throw createError('无权删除该便签', 403)
     }
 
-    await prisma.note.delete({ where: { id: noteId } })
+    const repliesSnapshot = existingNote.replies.map((r) => ({
+      id: r.id,
+      content: r.content,
+      userId: r.userId,
+      userName: r.user.displayName,
+      createdAt: r.createdAt.toISOString(),
+    }))
+
+    await prisma.$transaction([
+      prisma.deletedNote.create({
+        data: {
+          originalNoteId: existingNote.id,
+          title: existingNote.title,
+          content: existingNote.content,
+          color: existingNote.color,
+          noteUserId: existingNote.userId,
+          noteUserName: existingNote.user.displayName,
+          replies: repliesSnapshot,
+          deletedById: userId,
+          deletedByName: currentUser.displayName,
+          noteCreatedAt: existingNote.createdAt,
+        },
+      }),
+      prisma.note.delete({ where: { id: noteId } }),
+    ])
 
     res.json({ success: true, data: null })
   } catch (error) {

@@ -2,16 +2,18 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { adminService } from '../services/adminService'
-import type { AdminUser, InviteCode, DeletedReply } from '../../../shared/types'
+import type { AdminUser, InviteCode, DeletedReply, DeletedNote } from '../../../shared/types'
 import UserAvatar from '../components/UserAvatar'
 
 export default function Admin() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'users' | 'invites' | 'deleted-replies'>('users')
+  const [activeTab, setActiveTab] = useState<'users' | 'invites' | 'deleted-notes' | 'deleted-replies'>('users')
   const [users, setUsers] = useState<AdminUser[]>([])
   const [inviteCodes, setInviteCodes] = useState<InviteCode[]>([])
   const [deletedReplies, setDeletedReplies] = useState<DeletedReply[]>([])
+  const [deletedNotes, setDeletedNotes] = useState<DeletedNote[]>([])
+  const [expandedNote, setExpandedNote] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
@@ -54,11 +56,24 @@ export default function Admin() {
     }
   }, [])
 
+  const loadDeletedNotes = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const data = await adminService.getDeletedNotes()
+      setDeletedNotes(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '加载失败')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     if (activeTab === 'users') loadUsers()
     else if (activeTab === 'invites') loadInviteCodes()
+    else if (activeTab === 'deleted-notes') loadDeletedNotes()
     else loadDeletedReplies()
-  }, [activeTab, loadUsers, loadInviteCodes, loadDeletedReplies])
+  }, [activeTab, loadUsers, loadInviteCodes, loadDeletedNotes, loadDeletedReplies])
 
   const handleDeleteUser = async (id: string) => {
     if (!confirm('确定删除该用户？此操作不可撤销。')) return
@@ -102,6 +117,28 @@ export default function Admin() {
       setError(err instanceof Error ? err.message : '生成失败')
     } finally {
       setIsSending(false)
+    }
+  }
+
+  const handleRestoreNote = async (id: string) => {
+    if (!confirm('确定恢复这个便签？便签及其回复将被恢复到主页。')) return
+    try {
+      await adminService.restoreNote(id)
+      setDeletedNotes((prev) => prev.filter((n) => n.id !== id))
+      showSuccess('便签已恢复')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '恢复失败')
+    }
+  }
+
+  const handlePermanentlyDeleteNote = async (id: string) => {
+    if (!confirm('确定彻底删除这个便签？此操作不可撤销。')) return
+    try {
+      await adminService.permanentlyDeleteNote(id)
+      setDeletedNotes((prev) => prev.filter((n) => n.id !== id))
+      showSuccess('便签已彻底删除')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '删除失败')
     }
   }
 
@@ -191,11 +228,18 @@ export default function Admin() {
             邀请码
           </button>
           <button
+            onClick={() => setActiveTab('deleted-notes')}
+            className={`px-3 sm:px-5 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all whitespace-nowrap
+              ${activeTab === 'deleted-notes' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            便签回收站
+          </button>
+          <button
             onClick={() => setActiveTab('deleted-replies')}
             className={`px-3 sm:px-5 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all whitespace-nowrap
               ${activeTab === 'deleted-replies' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
           >
-            删除记录
+            回复删除记录
           </button>
         </div>
 
@@ -362,6 +406,108 @@ export default function Admin() {
                   )
                 })}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Deleted Notes Tab */}
+        {!isLoading && activeTab === 'deleted-notes' && (
+          <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+            <div className="px-5 py-4 border-b bg-gray-50/50">
+              <p className="text-sm text-gray-500">共 {deletedNotes.length} 个已删除便签</p>
+            </div>
+            <div className="divide-y">
+              {deletedNotes.length === 0 && (
+                <div className="px-5 py-8 text-center text-gray-400 text-sm">
+                  回收站为空
+                </div>
+              )}
+              {deletedNotes.map((dn) => {
+                const isSelfDelete = dn.noteUserId === dn.deletedById
+                const isExpanded = expandedNote === dn.id
+                const replies = dn.replies ?? []
+                return (
+                  <div key={dn.id} className="hover:bg-gray-50/50 transition-colors">
+                    <div className="px-5 py-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <span
+                              className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                                ({ yellow: 'bg-amber-400', pink: 'bg-pink-400', blue: 'bg-blue-400',
+                                  green: 'bg-green-400', purple: 'bg-purple-400', orange: 'bg-orange-400',
+                                } as Record<string, string>)[dn.color] ?? 'bg-gray-400'
+                              }`}
+                            />
+                            <span className="text-sm font-medium text-gray-800">
+                              {dn.title || '无标题'}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              by {dn.noteUserName}
+                            </span>
+                            {replies.length > 0 && (
+                              <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                                {replies.length} 条回复
+                              </span>
+                            )}
+                          </div>
+                          <div className="bg-gray-50 border border-gray-100 rounded-lg px-4 py-3 mb-2">
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap break-words line-clamp-3">
+                              {dn.content || '（无内容）'}
+                            </p>
+                          </div>
+                          {replies.length > 0 && (
+                            <button
+                              onClick={() => setExpandedNote(isExpanded ? null : dn.id)}
+                              className="text-xs text-primary-600 hover:text-primary-700 mb-2"
+                            >
+                              {isExpanded ? '收起回复' : `查看 ${replies.length} 条回复`}
+                            </button>
+                          )}
+                          {isExpanded && (
+                            <div className="ml-4 border-l-2 border-gray-200 pl-3 space-y-2 mb-2">
+                              {replies.map((r) => (
+                                <div key={r.id} className="text-xs">
+                                  <span className="font-medium text-gray-600">{r.userName}</span>
+                                  <span className="text-gray-400 ml-1">
+                                    {new Date(r.createdAt).toLocaleString('zh-CN')}
+                                  </span>
+                                  <p className="text-gray-600 mt-0.5 whitespace-pre-wrap">{r.content}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <div className="flex items-center gap-x-1.5 gap-y-0.5 text-xs text-gray-400 flex-wrap">
+                            <span>{new Date(dn.noteCreatedAt).toLocaleString('zh-CN')} 创建</span>
+                            <span className="hidden sm:inline">·</span>
+                            <span>{new Date(dn.deletedAt).toLocaleString('zh-CN')} 删除</span>
+                            <span className="hidden sm:inline">·</span>
+                            {isSelfDelete ? (
+                              <span className="text-gray-500">用户自行删除</span>
+                            ) : (
+                              <span className="text-amber-600">由 {dn.deletedByName} 删除</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-2 flex-shrink-0">
+                          <button
+                            onClick={() => handleRestoreNote(dn.id)}
+                            className="text-xs px-3 py-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors border border-green-200"
+                          >
+                            恢复
+                          </button>
+                          <button
+                            onClick={() => handlePermanentlyDeleteNote(dn.id)}
+                            className="text-xs px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-red-200"
+                          >
+                            彻底删除
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
