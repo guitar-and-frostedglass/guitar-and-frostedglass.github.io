@@ -6,11 +6,12 @@ import NoteThread from '../components/Note/NoteThread'
 import AddNoteButton from '../components/Note/AddNoteButton'
 
 export default function Dashboard() {
-  const { fetchNotes, isLoading, error, activeNote } = useNoteStore()
+  const { fetchNotes, reloadReadCounts, isLoading, error, activeNote } = useNoteStore()
 
   useEffect(() => {
+    reloadReadCounts()
     fetchNotes()
-  }, [fetchNotes])
+  }, [fetchNotes, reloadReadCounts])
 
   return (
     <div className="min-h-screen flex flex-col">

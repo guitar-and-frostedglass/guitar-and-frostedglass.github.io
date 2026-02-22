@@ -2,11 +2,26 @@ import { create } from 'zustand'
 import { noteService } from '../services/noteService'
 import type { Note, Reply, CreateNoteRequest, UpdateNoteRequest } from '../../../shared/types'
 
-const READ_COUNTS_KEY = 'gfg_read_counts'
+const READ_COUNTS_PREFIX = 'gfg_read_counts_'
+
+function getUserId(): string | null {
+  try {
+    const raw = sessionStorage.getItem('user')
+    if (!raw) return null
+    return JSON.parse(raw).id
+  } catch {
+    return null
+  }
+}
+
+function getStorageKey(): string {
+  const userId = getUserId()
+  return `${READ_COUNTS_PREFIX}${userId ?? 'anon'}`
+}
 
 function loadReadCounts(): Record<string, number> {
   try {
-    const raw = localStorage.getItem(READ_COUNTS_KEY)
+    const raw = localStorage.getItem(getStorageKey())
     return raw ? JSON.parse(raw) : {}
   } catch {
     return {}
@@ -14,7 +29,7 @@ function loadReadCounts(): Record<string, number> {
 }
 
 function saveReadCounts(counts: Record<string, number>) {
-  localStorage.setItem(READ_COUNTS_KEY, JSON.stringify(counts))
+  localStorage.setItem(getStorageKey(), JSON.stringify(counts))
 }
 
 interface NoteState {
@@ -34,6 +49,7 @@ interface NoteState {
   setActiveNote: (note: Note | null) => void
   markNoteRead: (noteId: string) => void
   isNoteUnread: (noteId: string) => boolean
+  reloadReadCounts: () => void
   clearError: () => void
   clearNotes: () => void
 }
@@ -49,22 +65,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     set({ isLoading: true, error: null })
     try {
       const notes = await noteService.getNotes()
-      const stored = get().readCounts
-      const updated = { ...stored }
-      let changed = false
-      for (const note of notes) {
-        const count = note._count?.replies ?? 0
-        if (!(note.id in updated)) {
-          updated[note.id] = count
-          changed = true
-        }
-      }
-      if (changed) {
-        saveReadCounts(updated)
-        set({ notes, readCounts: updated, isLoading: false })
-      } else {
-        set({ notes, isLoading: false })
-      }
+      set({ notes, isLoading: false })
     } catch (error) {
       const message = error instanceof Error ? error.message : '获取便签失败'
       set({ error: message, isLoading: false })
@@ -207,8 +208,14 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     const note = notes.find((n) => n.id === noteId)
     if (!note) return false
     const current = note._count?.replies ?? 0
-    const seen = readCounts[noteId] ?? 0
+    if (current === 0) return false
+    const seen = readCounts[noteId]
+    if (seen === undefined) return true
     return current > seen
+  },
+
+  reloadReadCounts: () => {
+    set({ readCounts: loadReadCounts() })
   },
 
   setActiveNote: (note: Note | null) => {
