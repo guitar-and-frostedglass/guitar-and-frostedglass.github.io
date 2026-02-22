@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import Cropper from 'react-easy-crop'
 import type { Area } from 'react-easy-crop'
 
@@ -56,7 +57,7 @@ export default function AvatarUpload({ onClose, onSave }: AvatarUploadProps) {
     }
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
       <div className="w-full max-w-md max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col">
         <div className="px-6 py-4 border-b flex items-center justify-between flex-shrink-0">
@@ -156,7 +157,8 @@ export default function AvatarUpload({ onClose, onSave }: AvatarUploadProps) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

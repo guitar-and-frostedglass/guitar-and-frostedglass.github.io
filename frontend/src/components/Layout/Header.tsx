@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../stores/authStore'
 import { useNoteStore } from '../../stores/noteStore'
@@ -159,7 +160,7 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
     }
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl">
         <div className="px-6 py-4 border-b flex items-center justify-between">
@@ -230,6 +231,7 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
           </button>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
