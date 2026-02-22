@@ -31,5 +31,6 @@ router.post(
   adminController.generateInviteCode
 )
 router.get('/invite-codes', adminController.getInviteCodes)
+router.get('/deleted-replies', adminController.getDeletedReplies)
 
 export default router

@@ -156,17 +156,21 @@ Certbot auto-modified the nginx config to add the `listen 443 ssl` block and red
 | POST | `/api/auth/register` | No | No | Register (requires valid invite code) |
 | POST | `/api/auth/login` | No | No | Login by email or display name |
 | GET | `/api/auth/me` | Yes | No | Get current user profile |
+| PUT | `/api/auth/avatar` | Yes | No | Upload avatar (base64 data URI, max 500KB) |
+| PUT | `/api/auth/password` | Yes | No | Change password (requires current password) |
 | GET | `/api/notes` | Yes | No | List all notes (all users, with reply counts) |
 | GET | `/api/notes/:id` | Yes | No | Get single note with all replies |
 | POST | `/api/notes` | Yes | No | Create note (title + content + color) |
 | PUT | `/api/notes/:id` | Yes | No | Update own note |
 | DELETE | `/api/notes/:id` | Yes | No | Delete own note |
 | POST | `/api/notes/:id/replies` | Yes | No | Reply to any note |
+| DELETE | `/api/notes/:id/replies/:replyId` | Yes | No | Delete own reply (admin can delete any) |
 | GET | `/api/admin/users` | Yes | Yes | List all registered users |
 | DELETE | `/api/admin/users/:id` | Yes | Yes | Delete a user |
 | PUT | `/api/admin/users/:id/role` | Yes | Yes | Change user role (USER/ADMIN) |
 | POST | `/api/admin/invite-codes` | Yes | Yes | Generate an invite code (15 min expiry); optionally sends invite email if `email` is provided in body |
 | GET | `/api/admin/invite-codes` | Yes | Yes | List all invite codes |
+| GET | `/api/admin/deleted-replies` | Yes | Yes | List all deleted reply records |
 
 ### Database schema
 
@@ -175,6 +179,7 @@ Certbot auto-modified the nginx config to add the `listen 443 ssl` block and red
 - `email` (unique)
 - `password_hash`
 - `display_name`
+- `avatar` (text, nullable — base64 data URI for user avatar)
 - `role` (enum: `USER`, `ADMIN`, default `USER`)
 - `created_at`, `updated_at`
 
@@ -203,6 +208,19 @@ Certbot auto-modified the nginx config to add the `listen 443 ssl` block and red
 - `creator_id` (FK → users.id, cascade delete)
 - `created_at`
 
+**deleted_replies** table (audit log for deleted replies):
+- `id` (UUID, PK)
+- `original_reply_id` (UUID of the deleted reply)
+- `content` (text — preserved reply content)
+- `note_id` (UUID of the parent note)
+- `note_title` (text — denormalized note title at time of deletion)
+- `reply_user_id` (UUID of the reply author)
+- `reply_user_name` (text — denormalized display name of reply author)
+- `deleted_by_id` (UUID of the user who performed the deletion)
+- `deleted_by_name` (text — denormalized display name of deleter)
+- `reply_created_at` (timestamp — when the original reply was created)
+- `deleted_at` (timestamp — when the reply was deleted)
+
 Managed via Prisma migrations in `backend/prisma/migrations/`. Migration files are generated locally with `prisma migrate dev` and applied on the server with `prisma migrate deploy`. See [DEPLOYMENT.md](DEPLOYMENT.md#prisma-migration-workflow) for the full workflow.
 
 ## Frontend
@@ -214,6 +232,7 @@ Managed via Prisma migrations in `backend/prisma/migrations/`. Migration files a
 - Zustand (state management)
 - React Router DOM 6
 - Axios (HTTP client)
+- react-easy-crop (avatar image cropping)
 
 ### Pages
 
@@ -277,6 +296,34 @@ A new bastion session must be created before SSH (the session OCID in the config
 - Security list ingress: ports 22, 80, 443 (TCP), ICMP
 - Security list egress: all traffic allowed
 - **iptables** on the instance must also allow ports 80/443 (Oracle Ubuntu blocks them by default even when the security list allows them)
+
+## Helper Scripts
+
+All scripts live in `scripts/` at the repo root. They are meant to be run from the local development machine unless noted otherwise.
+
+| Script | Run where | Purpose |
+|--------|-----------|---------|
+| `scripts/frontend_dev.sh` | Local | Starts the Vite dev server (`npm run dev`) pointing at the remote dev API. Auto-installs `node_modules` if missing. |
+| `scripts/start_backend.sh` | Server (via SSH) | Pulls latest code, rebuilds Docker containers, applies Prisma migrations to both prod and dev databases, and shows container status. One-command deploy. |
+| `scripts/prisma_migrate.sh` | Local | Generates a new Prisma migration locally. Starts a temporary local PostgreSQL (Homebrew), runs `prisma migrate dev --name <name>`, then stops PostgreSQL. Pass the migration name as an argument or it will prompt. |
+| `scripts/backup_database.sh` | Local | SSHes into the server, dumps both `gfg_prod` and `gfg_dev` databases, downloads the SQL files to `backups/`, and prunes old backups (keeps last 10 per database). |
+
+### Usage examples
+
+```bash
+# Local frontend development
+./scripts/frontend_dev.sh
+
+# Generate a new migration (local)
+./scripts/prisma_migrate.sh add_some_feature
+
+# Deploy backend update (run on server, or SSH first)
+ssh g-f-backend-ubuntu
+~/guitar-and-frostedglass-dev/scripts/start_backend.sh
+
+# Backup databases to local machine
+./scripts/backup_database.sh
+```
 
 ## File locations on server
 

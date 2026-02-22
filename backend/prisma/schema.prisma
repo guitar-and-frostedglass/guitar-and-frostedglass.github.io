@@ -76,3 +76,19 @@ model Reply {
 
   @@map("replies")
 }
+
+model DeletedReply {
+  id              String   @id @default(uuid())
+  originalReplyId String   @map("original_reply_id")
+  content         String
+  noteId          String   @map("note_id")
+  noteTitle       String   @default("") @map("note_title")
+  replyUserId     String   @map("reply_user_id")
+  replyUserName   String   @map("reply_user_name")
+  deletedById     String   @map("deleted_by_id")
+  deletedByName   String   @map("deleted_by_name")
+  replyCreatedAt  DateTime @map("reply_created_at")
+  deletedAt       DateTime @default(now()) @map("deleted_at")
+
+  @@map("deleted_replies")
+}

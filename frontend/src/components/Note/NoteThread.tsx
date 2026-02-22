@@ -23,12 +23,15 @@ const avatarGradient: Record<NoteColor, string> = {
 }
 
 export default function NoteThread() {
-  const { activeNote, setActiveNote, createReply, fetchNote } = useNoteStore()
+  const { activeNote, setActiveNote, createReply, deleteReply, fetchNote } = useNoteStore()
   const { user } = useAuthStore()
   const [replyContent, setReplyContent] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [deletingReplyId, setDeletingReplyId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const isAdmin = user?.role === 'ADMIN'
 
   useEffect(() => {
     if (activeNote?.id) {
@@ -114,8 +117,9 @@ export default function NoteThread() {
 
           {activeNote.replies?.map((reply) => {
             const isMe = reply.userId === user?.id
+            const canDelete = isMe || isAdmin
             return (
-              <div key={reply.id} className="flex gap-3">
+              <div key={reply.id} className="group flex gap-3">
                 <UserAvatar
                   displayName={reply.user?.displayName}
                   avatar={reply.user?.avatar}
@@ -130,6 +134,43 @@ export default function NoteThread() {
                     <span className="text-xs text-gray-400">
                       {new Date(reply.createdAt).toLocaleString('zh-CN')}
                     </span>
+                    {canDelete && confirmDeleteId !== reply.id && (
+                      <button
+                        onClick={() => setConfirmDeleteId(reply.id)}
+                        className="opacity-0 group-hover:opacity-100 ml-auto p-1 hover:bg-red-50 rounded transition-all"
+                        title="删除回复"
+                      >
+                        <svg className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    )}
+                    {confirmDeleteId === reply.id && (
+                      <span className="ml-auto flex items-center gap-1.5">
+                        <span className="text-xs text-red-500">删除?</span>
+                        <button
+                          onClick={async () => {
+                            setDeletingReplyId(reply.id)
+                            try {
+                              await deleteReply(activeNote.id, reply.id)
+                            } catch { /* handled in store */ }
+                            setDeletingReplyId(null)
+                            setConfirmDeleteId(null)
+                          }}
+                          disabled={deletingReplyId === reply.id}
+                          className="text-xs px-1.5 py-0.5 bg-red-500 text-white rounded hover:bg-red-600 transition-colors disabled:opacity-50"
+                        >
+                          {deletingReplyId === reply.id ? '...' : '确定'}
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
+                        >
+                          取消
+                        </button>
+                      </span>
+                    )}
                   </div>
                   <div className={`rounded-xl px-4 py-3 ${isMe ? 'bg-primary-50 border border-primary-100' : 'bg-gray-50 border border-gray-100'}`}>
                     <p className="text-gray-800 whitespace-pre-wrap break-words">{reply.content}</p>

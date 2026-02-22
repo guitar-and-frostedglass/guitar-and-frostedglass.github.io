@@ -154,3 +154,20 @@ export async function getInviteCodes(
     next(error)
   }
 }
+
+export async function getDeletedReplies(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const deletedReplies = await prisma.deletedReply.findMany({
+      orderBy: { deletedAt: 'desc' },
+      take: 100,
+    })
+
+    res.json({ success: true, data: deletedReplies })
+  } catch (error) {
+    next(error)
+  }
+}

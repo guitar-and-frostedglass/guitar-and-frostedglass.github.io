@@ -52,11 +52,17 @@ const replyValidation = [
     .withMessage('回复内容不能为空'),
 ]
 
+const deleteReplyValidation = [
+  param('id').isUUID().withMessage('无效的便签ID'),
+  param('replyId').isUUID().withMessage('无效的回复ID'),
+]
+
 router.get('/', noteController.getNotes)
 router.get('/:id', [param('id').isUUID().withMessage('无效的便签ID')], noteController.getNote)
 router.post('/', createValidation, noteController.createNote)
 router.put('/:id', updateValidation, noteController.updateNote)
 router.delete('/:id', deleteValidation, noteController.deleteNote)
 router.post('/:id/replies', replyValidation, noteController.createReply)
+router.delete('/:id/replies/:replyId', deleteReplyValidation, noteController.deleteReply)
 
 export default router

@@ -61,6 +61,7 @@ POST /api/auth/register
       "id": "uuid",
       "email": "user@example.com",
       "displayName": "用户昵称",
+      "avatar": null,
       "role": "USER",
       "createdAt": "2024-01-01T00:00:00.000Z",
       "updatedAt": "2024-01-01T00:00:00.000Z"
@@ -109,6 +110,7 @@ POST /api/auth/login
       "id": "uuid",
       "email": "user@example.com",
       "displayName": "用户昵称",
+      "avatar": null,
       "role": "USER",
       "createdAt": "2024-01-01T00:00:00.000Z",
       "updatedAt": "2024-01-01T00:00:00.000Z"
@@ -135,12 +137,65 @@ GET /api/auth/me
     "id": "uuid",
     "email": "user@example.com",
     "displayName": "用户昵称",
+    "avatar": "data:image/png;base64,...",
     "role": "USER",
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z"
   }
 }
 ```
+
+### 上传头像
+
+```
+PUT /api/auth/avatar
+```
+
+**需要认证**
+
+上传裁剪后的头像图片（base64 data URI 格式）。前端裁剪为 128x128 PNG 后上传。
+
+**请求体：**
+
+```json
+{
+  "avatar": "data:image/png;base64,iVBORw0KGgo..."
+}
+```
+
+- 必须以 `data:image/` 开头
+- 最大 500KB
+
+**响应：** 返回更新后的完整用户对象（同获取当前用户）
+
+### 修改密码
+
+```
+PUT /api/auth/password
+```
+
+**需要认证**
+
+**请求体：**
+
+```json
+{
+  "currentPassword": "旧密码",
+  "newPassword": "新密码（至少6位）"
+}
+```
+
+**响应：**
+
+```json
+{
+  "success": true,
+  "data": null
+}
+```
+
+**可能的错误：**
+- `400` 当前密码错误 / 新密码长度至少为6位
 
 ---
 
@@ -172,7 +227,8 @@ GET /api/notes
       "userId": "user-uuid",
       "user": {
         "id": "user-uuid",
-        "displayName": "用户昵称"
+        "displayName": "用户昵称",
+        "avatar": "data:image/png;base64,..."
       },
       "_count": {
         "replies": 5
@@ -207,7 +263,8 @@ GET /api/notes/:id
     "userId": "user-uuid",
     "user": {
       "id": "user-uuid",
-      "displayName": "作者昵称"
+      "displayName": "作者昵称",
+      "avatar": null
     },
     "replies": [
       {
@@ -217,7 +274,8 @@ GET /api/notes/:id
         "userId": "replier-uuid",
         "user": {
           "id": "replier-uuid",
-          "displayName": "回复者昵称"
+          "displayName": "回复者昵称",
+          "avatar": null
         },
         "createdAt": "2024-01-01T00:01:00.000Z",
         "updatedAt": "2024-01-01T00:01:00.000Z"
@@ -318,13 +376,36 @@ POST /api/notes/:id/replies
     "userId": "user-uuid",
     "user": {
       "id": "user-uuid",
-      "displayName": "回复者昵称"
+      "displayName": "回复者昵称",
+      "avatar": null
     },
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z"
   }
 }
 ```
+
+### 删除回复
+
+```
+DELETE /api/notes/:id/replies/:replyId
+```
+
+删除指定回复。用户只能删除自己的回复，管理员可以删除任何人的回复。删除后回复内容会被记录到删除日志中，管理员可在后台查看。
+
+**响应：**
+
+```json
+{
+  "success": true,
+  "data": null
+}
+```
+
+**可能的错误：**
+- `400` 回复不属于该便签
+- `403` 无权删除该回复
+- `404` 回复不存在
 
 ---
 
@@ -348,6 +429,7 @@ GET /api/admin/users
       "id": "uuid",
       "email": "user@example.com",
       "displayName": "用户昵称",
+      "avatar": null,
       "role": "USER",
       "createdAt": "2024-01-01T00:00:00.000Z",
       "updatedAt": "2024-01-01T00:00:00.000Z",
@@ -436,6 +518,37 @@ GET /api/admin/invite-codes
         "displayName": "Admin"
       },
       "createdAt": "2024-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+### 获取删除回复记录
+
+```
+GET /api/admin/deleted-replies
+```
+
+返回最近 100 条已删除的回复记录。每条记录包含原始回复内容、回复作者、所属便签、删除者等信息。
+
+**响应：**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "originalReplyId": "original-reply-uuid",
+      "content": "被删除的回复内容",
+      "noteId": "note-uuid",
+      "noteTitle": "便签标题",
+      "replyUserId": "reply-author-uuid",
+      "replyUserName": "回复者昵称",
+      "deletedById": "deleter-uuid",
+      "deletedByName": "删除者昵称",
+      "replyCreatedAt": "2024-01-01T00:01:00.000Z",
+      "deletedAt": "2024-01-02T10:30:00.000Z"
     }
   ]
 }

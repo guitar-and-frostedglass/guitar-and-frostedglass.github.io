@@ -48,4 +48,11 @@ export const noteService = {
     }
     throw new Error(response.data.error || '回复失败')
   },
+
+  async deleteReply(noteId: string, replyId: string): Promise<void> {
+    const response = await api.delete<ApiResponse<void>>(`/notes/${noteId}/replies/${replyId}`)
+    if (!response.data.success) {
+      throw new Error(response.data.error || '删除回复失败')
+    }
+  },
 }

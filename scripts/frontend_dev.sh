@@ -14,4 +14,4 @@ if [ ! -d "node_modules" ]; then
 fi
 
 echo "==> Starting frontend dev server on http://localhost:3000 ..."
-npm run dev
+VITE_API_URL=https://gfg-api.duckdns.org/dev-api npm run dev

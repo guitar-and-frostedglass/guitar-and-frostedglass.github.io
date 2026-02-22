@@ -209,3 +209,58 @@ export async function createReply(
     next(error)
   }
 }
+
+export async function deleteReply(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = req.userId
+    if (!userId) throw createError('未认证', 401)
+
+    const { id: noteId, replyId } = req.params
+
+    const reply = await prisma.reply.findUnique({
+      where: { id: replyId },
+      include: {
+        user: { select: { id: true, displayName: true } },
+        note: { select: { id: true, title: true } },
+      },
+    })
+
+    if (!reply) throw createError('回复不存在', 404)
+    if (reply.noteId !== noteId) throw createError('回复不属于该便签', 400)
+
+    const currentUser = await prisma.user.findUnique({ where: { id: userId } })
+    if (!currentUser) throw createError('用户不存在', 404)
+
+    const isOwner = reply.userId === userId
+    const isAdmin = currentUser.role === 'ADMIN'
+
+    if (!isOwner && !isAdmin) {
+      throw createError('无权删除该回复', 403)
+    }
+
+    await prisma.$transaction([
+      prisma.deletedReply.create({
+        data: {
+          originalReplyId: reply.id,
+          content: reply.content,
+          noteId: reply.noteId,
+          noteTitle: reply.note.title || '',
+          replyUserId: reply.userId,
+          replyUserName: reply.user.displayName,
+          deletedById: userId,
+          deletedByName: currentUser.displayName,
+          replyCreatedAt: reply.createdAt,
+        },
+      }),
+      prisma.reply.delete({ where: { id: replyId } }),
+    ])
+
+    res.json({ success: true, data: null })
+  } catch (error) {
+    next(error)
+  }
+}

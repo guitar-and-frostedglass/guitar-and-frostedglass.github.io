@@ -1,5 +1,5 @@
 import api from './api'
-import type { AdminUser, InviteCode, ApiResponse } from '../../../shared/types'
+import type { AdminUser, InviteCode, DeletedReply, ApiResponse } from '../../../shared/types'
 
 export const adminService = {
   async getUsers(): Promise<AdminUser[]> {
@@ -42,5 +42,13 @@ export const adminService = {
       return response.data.data
     }
     throw new Error(response.data.error || '获取邀请码列表失败')
+  },
+
+  async getDeletedReplies(): Promise<DeletedReply[]> {
+    const response = await api.get<ApiResponse<DeletedReply[]>>('/admin/deleted-replies')
+    if (response.data.success && response.data.data) {
+      return response.data.data
+    }
+    throw new Error(response.data.error || '获取删除记录失败')
   },
 }

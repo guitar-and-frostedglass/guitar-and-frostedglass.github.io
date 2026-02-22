@@ -2,15 +2,16 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { adminService } from '../services/adminService'
-import type { AdminUser, InviteCode } from '../../../shared/types'
+import type { AdminUser, InviteCode, DeletedReply } from '../../../shared/types'
 import UserAvatar from '../components/UserAvatar'
 
 export default function Admin() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'users' | 'invites'>('users')
+  const [activeTab, setActiveTab] = useState<'users' | 'invites' | 'deleted-replies'>('users')
   const [users, setUsers] = useState<AdminUser[]>([])
   const [inviteCodes, setInviteCodes] = useState<InviteCode[]>([])
+  const [deletedReplies, setDeletedReplies] = useState<DeletedReply[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
@@ -41,10 +42,23 @@ export default function Admin() {
     }
   }, [])
 
+  const loadDeletedReplies = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const data = await adminService.getDeletedReplies()
+      setDeletedReplies(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '加载失败')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     if (activeTab === 'users') loadUsers()
-    else loadInviteCodes()
-  }, [activeTab, loadUsers, loadInviteCodes])
+    else if (activeTab === 'invites') loadInviteCodes()
+    else loadDeletedReplies()
+  }, [activeTab, loadUsers, loadInviteCodes, loadDeletedReplies])
 
   const handleDeleteUser = async (id: string) => {
     if (!confirm('确定删除该用户？此操作不可撤销。')) return
@@ -175,6 +189,13 @@ export default function Admin() {
               ${activeTab === 'invites' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
           >
             邀请码
+          </button>
+          <button
+            onClick={() => setActiveTab('deleted-replies')}
+            className={`px-5 py-2 text-sm font-medium rounded-lg transition-all
+              ${activeTab === 'deleted-replies' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            删除记录
           </button>
         </div>
 
@@ -341,6 +362,65 @@ export default function Admin() {
                   )
                 })}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Deleted Replies Tab */}
+        {!isLoading && activeTab === 'deleted-replies' && (
+          <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+            <div className="px-5 py-4 border-b bg-gray-50/50">
+              <p className="text-sm text-gray-500">共 {deletedReplies.length} 条删除记录</p>
+            </div>
+            <div className="divide-y">
+              {deletedReplies.length === 0 && (
+                <div className="px-5 py-8 text-center text-gray-400 text-sm">
+                  暂无删除记录
+                </div>
+              )}
+              {deletedReplies.map((dr) => {
+                const isSelfDelete = dr.replyUserId === dr.deletedById
+                return (
+                  <div key={dr.id} className="px-5 py-4 hover:bg-gray-50/50 transition-colors">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <span className="text-sm font-medium text-gray-800">{dr.replyUserName}</span>
+                          <span className="text-xs text-gray-400">的回复</span>
+                          {dr.noteTitle && (
+                            <>
+                              <span className="text-xs text-gray-400">在</span>
+                              <span className="text-xs font-medium text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">
+                                {dr.noteTitle}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                        <div className="bg-gray-50 border border-gray-100 rounded-lg px-4 py-3 mb-2">
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{dr.content}</p>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
+                          <span>
+                            回复时间: {new Date(dr.replyCreatedAt).toLocaleString('zh-CN')}
+                          </span>
+                          <span>·</span>
+                          <span>
+                            删除时间: {new Date(dr.deletedAt).toLocaleString('zh-CN')}
+                          </span>
+                          <span>·</span>
+                          <span>
+                            {isSelfDelete ? (
+                              <span className="text-gray-500">用户自行删除</span>
+                            ) : (
+                              <span className="text-amber-600">由 {dr.deletedByName} 删除</span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}

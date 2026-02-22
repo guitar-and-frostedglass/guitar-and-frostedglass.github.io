@@ -14,6 +14,7 @@ interface NoteState {
   updateNote: (id: string, data: UpdateNoteRequest) => Promise<void>
   deleteNote: (id: string) => Promise<void>
   createReply: (noteId: string, content: string) => Promise<Reply>
+  deleteReply: (noteId: string, replyId: string) => Promise<void>
   setActiveNote: (note: Note | null) => void
   clearError: () => void
   clearNotes: () => void
@@ -113,6 +114,32 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       return reply
     } catch (error) {
       const message = error instanceof Error ? error.message : '回复失败'
+      set({ error: message })
+      throw error
+    }
+  },
+
+  deleteReply: async (noteId: string, replyId: string) => {
+    try {
+      await noteService.deleteReply(noteId, replyId)
+      const { activeNote } = get()
+      if (activeNote && activeNote.id === noteId && activeNote.replies) {
+        set({
+          activeNote: {
+            ...activeNote,
+            replies: activeNote.replies.filter((r) => r.id !== replyId),
+          },
+        })
+      }
+      set((state) => ({
+        notes: state.notes.map((note) =>
+          note.id === noteId
+            ? { ...note, _count: { replies: Math.max((note._count?.replies ?? 1) - 1, 0) } }
+            : note
+        ),
+      }))
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '删除回复失败'
       set({ error: message })
       throw error
     }
