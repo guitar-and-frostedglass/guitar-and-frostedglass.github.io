@@ -11,6 +11,7 @@ interface AuthState {
   login: (data: LoginRequest) => Promise<void>
   register: (data: RegisterRequest) => Promise<void>
   updateAvatar: (avatar: string) => Promise<void>
+  updateProfile: (displayName: string, email: string) => Promise<void>
   logout: () => void
   clearError: () => void
   initAuth: () => void
@@ -56,6 +57,11 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   updateAvatar: async (avatar: string) => {
     const updatedUser = await authService.updateAvatar(avatar)
+    set({ user: updatedUser })
+  },
+
+  updateProfile: async (displayName: string, email: string) => {
+    const updatedUser = await authService.updateProfile(displayName, email)
     set({ user: updatedUser })
   },
 

@@ -42,10 +42,22 @@ const changePasswordValidation = [
     .withMessage('新密码长度至少为6位'),
 ]
 
+const updateProfileValidation = [
+  body('displayName')
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('昵称长度为1-50个字符'),
+  body('email')
+    .isEmail()
+    .withMessage('请输入有效的邮箱地址')
+    .normalizeEmail(),
+]
+
 router.post('/register', registerValidation, authController.register)
 router.post('/login', loginValidation, authController.login)
 router.get('/me', authenticate, authController.getCurrentUser)
 router.put('/avatar', authenticate, authController.updateAvatar)
 router.put('/password', authenticate, changePasswordValidation, authController.changePassword)
+router.put('/profile', authenticate, updateProfileValidation, authController.updateProfile)
 
 export default router

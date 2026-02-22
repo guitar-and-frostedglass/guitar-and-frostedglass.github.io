@@ -39,12 +39,20 @@ export async function register(
       throw createError('邀请码已过期', 400)
     }
 
-    const existingUser = await prisma.user.findUnique({
+    const existingEmail = await prisma.user.findUnique({
       where: { email },
     })
 
-    if (existingUser) {
+    if (existingEmail) {
       throw createError('该邮箱已被注册', 400)
+    }
+
+    const existingName = await prisma.user.findUnique({
+      where: { displayName },
+    })
+
+    if (existingName) {
+      throw createError('该昵称已被使用', 400)
     }
 
     const passwordHash = await bcrypt.hash(password, 12)
@@ -102,7 +110,7 @@ export async function login(
     const isEmail = identifier.includes('@')
     const user = isEmail
       ? await prisma.user.findUnique({ where: { email: identifier } })
-      : await prisma.user.findFirst({ where: { displayName: identifier } })
+      : await prisma.user.findUnique({ where: { displayName: identifier } })
 
     if (!user) {
       throw createError('账号或密码错误', 401)
@@ -243,6 +251,56 @@ export async function changePassword(
     })
 
     res.json({ success: true, data: null })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function updateProfile(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) {
+      throw createError(errors.array()[0].msg, 400)
+    }
+
+    const userId = req.userId
+    if (!userId) throw createError('未认证', 401)
+
+    const { displayName, email } = req.body
+
+    const emailTaken = await prisma.user.findFirst({
+      where: { email, id: { not: userId } },
+    })
+    if (emailTaken) {
+      throw createError('该邮箱已被注册', 400)
+    }
+
+    const nameTaken = await prisma.user.findFirst({
+      where: { displayName, id: { not: userId } },
+    })
+    if (nameTaken) {
+      throw createError('该昵称已被使用', 400)
+    }
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { displayName, email },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        avatar: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    })
+
+    res.json({ success: true, data: user })
   } catch (error) {
     next(error)
   }

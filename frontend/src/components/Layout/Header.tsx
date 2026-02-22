@@ -1,29 +1,20 @@
 import { useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../stores/authStore'
 import { useNoteStore } from '../../stores/noteStore'
-import { authService } from '../../services/authService'
 import UserAvatar from '../UserAvatar'
-import AvatarUpload from '../AvatarUpload'
 
 export default function Header() {
   const navigate = useNavigate()
-  const { user, logout, updateAvatar } = useAuthStore()
+  const { user, logout } = useAuthStore()
   const { clearNotes } = useNoteStore()
   const [showDropdown, setShowDropdown] = useState(false)
-  const [showPasswordModal, setShowPasswordModal] = useState(false)
-  const [showAvatarModal, setShowAvatarModal] = useState(false)
   const isAdmin = user?.role === 'ADMIN'
 
   const handleLogout = () => {
     clearNotes()
     logout()
     navigate('/login')
-  }
-
-  const handleAvatarSave = async (dataUrl: string) => {
-    await updateAvatar(dataUrl)
   }
 
   return (
@@ -87,24 +78,14 @@ export default function Header() {
                   </button>
                 )}
                 <button
-                  onClick={() => { setShowAvatarModal(true); setShowDropdown(false) }}
+                  onClick={() => { navigate('/profile'); setShowDropdown(false) }}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
-                  修改头像
-                </button>
-                <button
-                  onClick={() => { setShowPasswordModal(true); setShowDropdown(false) }}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                  </svg>
-                  修改密码
+                  个人资料
                 </button>
                 <button
                   onClick={handleLogout}
@@ -117,121 +98,6 @@ export default function Header() {
           )}
         </div>
       </div>
-
-      {showAvatarModal && (
-        <AvatarUpload onClose={() => setShowAvatarModal(false)} onSave={handleAvatarSave} />
-      )}
-
-      {showPasswordModal && (
-        <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />
-      )}
     </header>
-  )
-}
-
-function ChangePasswordModal({ onClose }: { onClose: () => void }) {
-  const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-
-    if (form.newPassword.length < 6) {
-      setError('新密码长度至少为6位')
-      return
-    }
-    if (form.newPassword !== form.confirmPassword) {
-      setError('两次输入的新密码不一致')
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      await authService.changePassword(form.currentPassword, form.newPassword)
-      setSuccess(true)
-      setTimeout(onClose, 1500)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '修改密码失败')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl">
-        <div className="px-6 py-4 border-b flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-800">修改密码</h3>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors">
-            <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">当前密码</label>
-            <input
-              type="password"
-              value={form.currentPassword}
-              onChange={(e) => setForm(f => ({ ...f, currentPassword: e.target.value }))}
-              required
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl 
-                focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all bg-gray-50"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">新密码</label>
-            <input
-              type="password"
-              value={form.newPassword}
-              onChange={(e) => setForm(f => ({ ...f, newPassword: e.target.value }))}
-              required
-              placeholder="至少6位字符"
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl 
-                focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all bg-gray-50"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">确认新密码</label>
-            <input
-              type="password"
-              value={form.confirmPassword}
-              onChange={(e) => setForm(f => ({ ...f, confirmPassword: e.target.value }))}
-              required
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl 
-                focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all bg-gray-50"
-            />
-          </div>
-
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
-
-          {success && (
-            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-600">密码修改成功</p>
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={isLoading || success}
-            className="w-full py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 
-              text-white font-medium rounded-xl hover:from-primary-600 hover:to-primary-700 
-              disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            {isLoading ? '修改中...' : '确认修改'}
-          </button>
-        </form>
-      </div>
-    </div>,
-    document.body
   )
 }

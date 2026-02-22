@@ -60,4 +60,13 @@ export const authService = {
       throw new Error(response.data.error || '修改密码失败')
     }
   },
+
+  async updateProfile(displayName: string, email: string): Promise<AuthResponse['user']> {
+    const response = await api.put<ApiResponse<AuthResponse['user']>>('/auth/profile', { displayName, email })
+    if (response.data.success && response.data.data) {
+      sessionStorage.setItem('user', JSON.stringify(response.data.data))
+      return response.data.data
+    }
+    throw new Error(response.data.error || '更新资料失败')
+  },
 }

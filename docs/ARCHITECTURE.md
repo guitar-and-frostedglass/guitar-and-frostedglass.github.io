@@ -158,6 +158,7 @@ Certbot auto-modified the nginx config to add the `listen 443 ssl` block and red
 | GET | `/api/auth/me` | Yes | No | Get current user profile |
 | PUT | `/api/auth/avatar` | Yes | No | Upload avatar (base64 data URI, max 500KB) |
 | PUT | `/api/auth/password` | Yes | No | Change password (requires current password) |
+| PUT | `/api/auth/profile` | Yes | No | Update display name and email (both must be unique) |
 | GET | `/api/notes` | Yes | No | List all notes (all users, with reply counts) |
 | GET | `/api/notes/:id` | Yes | No | Get single note with all replies |
 | POST | `/api/notes` | Yes | No | Create note (title + content + color) |
@@ -176,9 +177,9 @@ Certbot auto-modified the nginx config to add the `listen 443 ssl` block and red
 
 **users** table:
 - `id` (UUID, PK)
-- `email` (unique)
+- `email` (unique, mutable)
 - `password_hash`
-- `display_name`
+- `display_name` (unique, mutable)
 - `avatar` (text, nullable — base64 data URI for user avatar)
 - `role` (enum: `USER`, `ADMIN`, default `USER`)
 - `created_at`, `updated_at`
@@ -241,6 +242,7 @@ Managed via Prisma migrations in `backend/prisma/migrations/`. Migration files a
 | `/login` | Public | Login by email or display name |
 | `/register` | Public | Register with invite code (auto-fills from `?code=` query param) |
 | `/` | Authenticated | Dashboard — shared note board with chat threads |
+| `/profile` | Authenticated | User profile — edit avatar, display name, email, and password |
 | `/admin` | Admin only | User management + invite code generation |
 
 ### Build configuration
