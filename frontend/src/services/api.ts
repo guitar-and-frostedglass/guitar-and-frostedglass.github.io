@@ -1,10 +1,8 @@
 import axios, { AxiosError } from 'axios'
 import type { ApiResponse } from '../../../shared/types'
 
-// API 基础配置
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
-// 创建 axios 实例
 export const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -13,10 +11,9 @@ export const api = axios.create({
   timeout: 10000,
 })
 
-// 请求拦截器 - 添加认证 token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -27,19 +24,20 @@ api.interceptors.request.use(
   }
 )
 
-// 响应拦截器 - 处理错误
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiResponse<unknown>>) => {
-    if (error.response?.status === 401) {
-      // Token 过期或无效，清除本地存储并重定向到登录页
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
+    if (error.response?.status === 401 && sessionStorage.getItem('token')) {
+      sessionStorage.removeItem('token')
+      sessionStorage.removeItem('user')
       window.location.href = '/login'
+    }
+    const serverMessage = error.response?.data?.error
+    if (serverMessage) {
+      return Promise.reject(new Error(serverMessage))
     }
     return Promise.reject(error)
   }
 )
 
 export default api
-

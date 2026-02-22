@@ -6,8 +6,8 @@ export const authService = {
     const response = await api.post<ApiResponse<AuthResponse>>('/auth/login', data)
     if (response.data.success && response.data.data) {
       const { token, user } = response.data.data
-      localStorage.setItem('token', token)
-      localStorage.setItem('user', JSON.stringify(user))
+      sessionStorage.setItem('token', token)
+      sessionStorage.setItem('user', JSON.stringify(user))
       return response.data.data
     }
     throw new Error(response.data.error || '登录失败')
@@ -17,20 +17,20 @@ export const authService = {
     const response = await api.post<ApiResponse<AuthResponse>>('/auth/register', data)
     if (response.data.success && response.data.data) {
       const { token, user } = response.data.data
-      localStorage.setItem('token', token)
-      localStorage.setItem('user', JSON.stringify(user))
+      sessionStorage.setItem('token', token)
+      sessionStorage.setItem('user', JSON.stringify(user))
       return response.data.data
     }
     throw new Error(response.data.error || '注册失败')
   },
 
   logout(): void {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('user')
   },
 
   getCurrentUser(): AuthResponse['user'] | null {
-    const userStr = localStorage.getItem('user')
+    const userStr = sessionStorage.getItem('user')
     if (userStr) {
       try {
         return JSON.parse(userStr)
@@ -42,6 +42,6 @@ export const authService = {
   },
 
   isAuthenticated(): boolean {
-    return !!localStorage.getItem('token')
+    return !!sessionStorage.getItem('token')
   },
 }
