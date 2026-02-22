@@ -190,6 +190,7 @@ Certbot auto-modified the nginx config to add the `listen 443 ssl` block and red
 - `content` (text, default "")
 - `color` (string, default "yellow")
 - `position_x`, `position_y` (int, legacy — unused in current UI)
+- `last_activity_at` (timestamp, default now — updated when a reply is created; used to sort notes by most recent activity)
 - `user_id` (FK → users.id, cascade delete)
 - `created_at`, `updated_at`
 
@@ -298,6 +299,30 @@ A new bastion session must be created before SSH (the session OCID in the config
 - Security list ingress: ports 22, 80, 443 (TCP), ICMP
 - Security list egress: all traffic allowed
 - **iptables** on the instance must also allow ports 80/443 (Oracle Ubuntu blocks them by default even when the security list allows them)
+
+## Git Usage
+
+**Always use `guitar` instead of `git`** for all Git operations in this repository. `guitar` is a shell function (defined in `~/.zshrc`) that wraps `git` with the correct SSH key and commit identity:
+
+```bash
+guitar() {
+    local guitar_ssh_key="${GUITAR_SSH_KEY:-$HOME/.ssh/id_ed25519_guitar}"
+    GIT_SSH_COMMAND="ssh -i \"$guitar_ssh_key\" -o IdentitiesOnly=yes" \
+    git \
+        -c user.email="guitar.and.frostedglass@gmail.com" \
+        -c user.name="guitar-and-frostedglass" \
+        "$@"
+}
+```
+
+This ensures pushes use the dedicated deploy key and commits are attributed to the project account, without affecting your global `git` config. Use it exactly like `git`:
+
+```bash
+guitar status
+guitar add -A
+guitar commit -m "feat: something"
+guitar push
+```
 
 ## Helper Scripts
 

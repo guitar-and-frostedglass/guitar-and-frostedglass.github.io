@@ -23,7 +23,7 @@ const avatarGradient: Record<NoteColor, string> = {
 }
 
 export default function NoteThread() {
-  const { activeNote, setActiveNote, createReply, deleteReply, fetchNote } = useNoteStore()
+  const { activeNote, setActiveNote, createReply, deleteReply, fetchNote, markNoteRead } = useNoteStore()
   const { user } = useAuthStore()
   const [replyContent, setReplyContent] = useState('')
   const [isSending, setIsSending] = useState(false)
@@ -36,8 +36,9 @@ export default function NoteThread() {
   useEffect(() => {
     if (activeNote?.id) {
       fetchNote(activeNote.id)
+      markNoteRead(activeNote.id)
     }
-  }, [activeNote?.id, fetchNote])
+  }, [activeNote?.id, fetchNote, markNoteRead])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })

@@ -27,12 +27,14 @@ const avatarColors: Record<NoteColor, string> = {
 }
 
 export default function NoteCard({ note }: NoteCardProps) {
-  const { setActiveNote, fetchNote, deleteNote } = useNoteStore()
+  const { setActiveNote, fetchNote, deleteNote, markNoteRead, isNoteUnread } = useNoteStore()
   const { user } = useAuthStore()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const isOwner = user?.id === note.userId
+  const unread = isNoteUnread(note.id)
 
   const handleClick = async () => {
+    markNoteRead(note.id)
     await fetchNote(note.id)
     setActiveNote(note)
   }
@@ -96,6 +98,12 @@ export default function NoteCard({ note }: NoteCardProps) {
             d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
         <span>{replyCount} 条回复</span>
+        {unread && (
+          <span className="ml-auto flex items-center gap-1 text-primary-500 font-medium">
+            <span className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
+            新回复
+          </span>
+        )}
       </div>
 
       {showDeleteConfirm && (

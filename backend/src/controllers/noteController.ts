@@ -14,7 +14,7 @@ export async function getNotes(
     if (!userId) throw createError('未认证', 401)
 
     const notes = await prisma.note.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { lastActivityAt: 'desc' },
       include: {
         user: {
           select: { id: true, displayName: true, avatar: true },
@@ -195,14 +195,20 @@ export async function createReply(
     const note = await prisma.note.findUnique({ where: { id: noteId } })
     if (!note) throw createError('便签不存在', 404)
 
-    const reply = await prisma.reply.create({
-      data: { content, noteId, userId },
-      include: {
-        user: {
-          select: { id: true, displayName: true, avatar: true },
+    const [reply] = await prisma.$transaction([
+      prisma.reply.create({
+        data: { content, noteId, userId },
+        include: {
+          user: {
+            select: { id: true, displayName: true, avatar: true },
+          },
         },
-      },
-    })
+      }),
+      prisma.note.update({
+        where: { id: noteId },
+        data: { lastActivityAt: new Date() },
+      }),
+    ])
 
     res.status(201).json({ success: true, data: reply })
   } catch (error) {

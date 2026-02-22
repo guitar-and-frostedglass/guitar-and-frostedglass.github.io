@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "notes" ADD COLUMN     "last_activity_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;

@@ -25,6 +25,7 @@ export interface Note {
   positionY: number
   userId: string
   user: NoteUser
+  lastActivityAt: string
   createdAt: string
   updatedAt: string
   _count?: {
