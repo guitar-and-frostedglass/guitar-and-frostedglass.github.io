@@ -1,218 +1,223 @@
-# 部署指南
+# Deployment Guide
 
-本文档介绍如何部署 Guitar & Frosted Glass 应用。
+## Quick Reference
 
-## 架构概述
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        用户浏览器                            │
-└─────────────────────────────────────────────────────────────┘
-                              │
-              ┌───────────────┴───────────────┐
-              ▼                               ▼
-┌─────────────────────────┐     ┌─────────────────────────────┐
-│    GitHub Pages         │     │   Oracle Free Tier          │
-│  (静态前端 React App)    │────>│   Docker + PostgreSQL       │
-└─────────────────────────┘     └─────────────────────────────┘
-```
+| What | Where |
+|------|-------|
+| Prod API | `https://gfg-api.duckdns.org/api/*` |
+| Dev API | `https://gfg-api.duckdns.org/dev-api/*` |
+| Frontend | `https://guitar-and-frostedglass.github.io/guitar-and-frostedglass-dev/` |
+| Server | Oracle Cloud VM `129.153.195.31` (SSH via bastion) |
+| DNS | `gfg-api.duckdns.org` on DuckDNS |
+| SSL cert | Let's Encrypt, auto-renews via certbot timer |
 
 ---
 
-## 前端部署 (GitHub Pages)
+## Everyday Operations
 
-### 自动部署
+### Start everything after a reboot
 
-前端代码会在推送到 `main` 分支时自动部署到 GitHub Pages。
+Docker containers have `restart: unless-stopped`, so they auto-start. If they don't:
 
-1. 在 GitHub 仓库设置中启用 GitHub Pages
-2. 设置 Repository Variables:
-   - `API_URL`: 后端 API 地址（例如 `https://your-server.com/api`）
+```bash
+cd ~/guitar-and-frostedglass-dev/backend
+docker compose -f docker-compose.prod.yml up -d
+```
 
-### 手动部署
+Nginx also auto-starts. If it doesn't:
+
+```bash
+sudo systemctl start nginx
+```
+
+### Check status
+
+```bash
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs --tail 20 api-prod
+docker compose -f docker-compose.prod.yml logs --tail 20 api-dev
+sudo systemctl status nginx
+```
+
+### Deploy a code update
+
+```bash
+cd ~/guitar-and-frostedglass-dev
+git pull
+cd backend
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml exec api-prod npx prisma migrate deploy
+docker compose -f docker-compose.prod.yml exec api-dev npx prisma migrate deploy
+```
+
+### SSL certificate renewal
+
+Certbot installs a systemd timer that auto-renews. To verify:
+
+```bash
+sudo certbot renew --dry-run
+```
+
+If auto-renewal fails or you need to manually renew:
+
+```bash
+sudo certbot renew
+```
+
+If the certificate is completely broken, re-issue it:
+
+```bash
+sudo certbot --nginx -d gfg-api.duckdns.org
+```
+
+The cert expires every 90 days. Certbot renews it when 30 days remain.
+
+### Backup database
+
+```bash
+cd ~/guitar-and-frostedglass-dev/backend
+
+# Backup prod
+docker compose -f docker-compose.prod.yml exec postgres pg_dump -U postgres gfg_prod > backup_prod_$(date +%Y%m%d).sql
+
+# Backup dev
+docker compose -f docker-compose.prod.yml exec postgres pg_dump -U postgres gfg_dev > backup_dev_$(date +%Y%m%d).sql
+```
+
+### Restore database
+
+```bash
+docker compose -f docker-compose.prod.yml exec -T postgres psql -U postgres gfg_prod < backup_prod_YYYYMMDD.sql
+```
+
+### Reset prod database (fresh start for production launch)
+
+```bash
+cd ~/guitar-and-frostedglass-dev/backend
+docker compose -f docker-compose.prod.yml exec postgres pg_dump -U postgres gfg_prod > backup_prod_before_reset.sql
+docker compose -f docker-compose.prod.yml exec postgres psql -U postgres -c "DROP DATABASE gfg_prod;"
+docker compose -f docker-compose.prod.yml exec postgres psql -U postgres -c "CREATE DATABASE gfg_prod;"
+docker compose -f docker-compose.prod.yml exec api-prod npx prisma migrate deploy
+```
+
+### Local frontend development against dev API
 
 ```bash
 cd frontend
-npm install
-VITE_API_URL=https://your-api-url.com/api npm run build
-# 将 dist/ 目录内容上传到 GitHub Pages
+VITE_API_URL=https://gfg-api.duckdns.org/dev-api npm run dev
 ```
 
 ---
 
-## 后端部署 (Oracle Free Tier)
+## DuckDNS IP update
 
-### 1. 准备 Oracle 云实例
-
-1. 创建 Oracle Cloud 账号并申请 Free Tier
-2. 创建一个 VM 实例（推荐 Ubuntu 22.04）
-3. 配置安全组规则，开放端口：
-   - 22 (SSH)
-   - 80 (HTTP)
-   - 443 (HTTPS)
-   - 4000 (API，可选)
-
-### 2. 连接服务器并安装依赖
+If the server IP changes, update DuckDNS:
 
 ```bash
-# SSH 连接到服务器
-ssh ubuntu@your-server-ip
+curl "https://www.duckdns.org/update?domains=gfg-api&token=YOUR_DUCKDNS_TOKEN&ip=NEW_IP"
+```
 
-# 更新系统
+---
+
+## Full Setup From Scratch
+
+Only needed if you're setting up a brand new server.
+
+### 1. Install Docker
+
+```bash
 sudo apt update && sudo apt upgrade -y
-
-# 安装 Docker
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 sudo usermod -aG docker $USER
-
-# 安装 Docker Compose
 sudo apt install docker-compose-plugin -y
-
-# 重新登录以使 docker 组生效
-exit
-# 重新 SSH 连接
+# Log out and back in
 ```
 
-### 3. 部署后端
+### 2. Open firewall (Oracle Cloud Ubuntu requires this)
 
 ```bash
-# 克隆代码
-git clone https://github.com/yourusername/guitar-and-frostedglass-dev.git
-cd guitar-and-frostedglass-dev/backend
-
-# 创建环境变量文件
-cat > .env << EOF
-NODE_ENV=production
-PORT=4000
-DATABASE_URL=postgresql://postgres:your-strong-password@postgres:5432/guitar_frostedglass
-JWT_SECRET=$(openssl rand -base64 32)
-JWT_EXPIRES_IN=7d
-CORS_ORIGIN=https://yourusername.github.io
-EOF
-
-# 修改 docker-compose.yml 中的 PostgreSQL 密码
-# 确保与 DATABASE_URL 中的密码一致
-
-# 启动服务
-docker compose up -d
-
-# 运行数据库迁移
-docker compose exec api npx prisma migrate deploy
-
-# 检查服务状态
-docker compose ps
-docker compose logs -f api
+sudo iptables -I INPUT 5 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+sudo iptables -I INPUT 5 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+sudo netfilter-persistent save
 ```
 
-### 4. 配置 Nginx 反向代理 + SSL
+The rules must be **above** the REJECT-all rule. Verify with:
 
 ```bash
-# 安装 Nginx 和 Certbot
+sudo iptables -L INPUT -n --line-numbers
+```
+
+### 3. Install Nginx + Certbot
+
+```bash
 sudo apt install nginx certbot python3-certbot-nginx -y
+```
 
-# 创建 Nginx 配置
-sudo tee /etc/nginx/sites-available/api << EOF
+### 4. Clone repo and create .env
+
+```bash
+git clone git@github.com:guitar-and-frostedglass/guitar-and-frostedglass-dev.git ~/guitar-and-frostedglass-dev
+cd ~/guitar-and-frostedglass-dev/backend
+
+cat > .env << EOF
+POSTGRES_PASSWORD=$(openssl rand -base64 24)
+JWT_SECRET_PROD=$(openssl rand -base64 32)
+JWT_SECRET_DEV=$(openssl rand -base64 32)
+CORS_ORIGIN_PROD=https://guitar-and-frostedglass.github.io
+CORS_ORIGIN_DEV=https://guitar-and-frostedglass.github.io,http://localhost:3000
+EOF
+```
+
+### 5. Start containers and migrate
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml exec api-prod npx prisma migrate deploy
+docker compose -f docker-compose.prod.yml exec api-dev npx prisma migrate deploy
+```
+
+### 6. Configure Nginx
+
+Write `/etc/nginx/sites-available/gfg-api` with this content:
+
+```nginx
 server {
     listen 80;
-    server_name your-domain.com;
+    server_name gfg-api.duckdns.org;
 
-    location / {
+    location /api/ {
         proxy_pass http://localhost:4000;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /dev-api/ {
+        rewrite ^/dev-api(.*)$ /api$1 break;
+        proxy_pass http://localhost:4001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
-EOF
-
-# 启用配置
-sudo ln -s /etc/nginx/sites-available/api /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
-
-# 获取 SSL 证书
-sudo certbot --nginx -d your-domain.com
 ```
 
-### 5. 设置自动更新（可选）
-
-创建更新脚本 `/home/ubuntu/update-api.sh`:
+Then enable and get SSL:
 
 ```bash
-#!/bin/bash
-cd /home/ubuntu/guitar-and-frostedglass-dev
-git pull
-cd backend
-docker compose down
-docker compose build
-docker compose up -d
-docker compose exec -T api npx prisma migrate deploy
+sudo ln -sf /etc/nginx/sites-available/gfg-api /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d gfg-api.duckdns.org
 ```
 
-设置 Webhook 或定时任务来触发更新。
+### 7. GitHub Pages setup
 
----
-
-## 环境变量说明
-
-### 前端 (.env)
-
-| 变量 | 说明 | 示例 |
-|------|------|------|
-| `VITE_API_URL` | 后端 API 地址 | `https://api.example.com/api` |
-
-### 后端 (.env)
-
-| 变量 | 说明 | 示例 |
-|------|------|------|
-| `NODE_ENV` | 运行环境 | `production` |
-| `PORT` | 服务端口 | `4000` |
-| `DATABASE_URL` | PostgreSQL 连接字符串 | `postgresql://user:pass@host:5432/db` |
-| `JWT_SECRET` | JWT 签名密钥 | 随机生成的强密钥 |
-| `JWT_EXPIRES_IN` | JWT 过期时间 | `7d` |
-| `CORS_ORIGIN` | 允许的跨域来源 | `https://user.github.io` |
-
----
-
-## 常见问题
-
-### Q: 前端无法连接后端
-
-1. 检查 `VITE_API_URL` 是否正确配置
-2. 检查后端 `CORS_ORIGIN` 是否包含前端域名
-3. 检查服务器防火墙规则
-
-### Q: 数据库连接失败
-
-1. 检查 `DATABASE_URL` 格式是否正确
-2. 检查 PostgreSQL 容器是否正常运行
-3. 运行 `docker compose logs postgres` 查看日志
-
-### Q: SSL 证书问题
-
-1. 确保域名已正确解析到服务器 IP
-2. 运行 `sudo certbot renew --dry-run` 测试续期
-3. 检查 Nginx 配置语法
-
----
-
-## 备份与恢复
-
-### 备份数据库
-
-```bash
-docker compose exec postgres pg_dump -U postgres guitar_frostedglass > backup.sql
-```
-
-### 恢复数据库
-
-```bash
-docker compose exec -T postgres psql -U postgres guitar_frostedglass < backup.sql
-```
-
+1. Repo Settings > Secrets and variables > Actions > Variables: add `API_URL` = `https://gfg-api.duckdns.org/api`
+2. Repo Settings > Pages: set source to GitHub Actions
+3. Push to `main` triggers frontend deploy via `.github/workflows/deploy-frontend.yml`
