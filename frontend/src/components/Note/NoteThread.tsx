@@ -23,7 +23,7 @@ const avatarGradient: Record<NoteColor, string> = {
 }
 
 export default function NoteThread() {
-  const { activeNote, setActiveNote, createReply, deleteReply, fetchNote, markNoteRead } = useNoteStore()
+  const { activeNote, setActiveNote, createReply, deleteReply, updateReply, updateNote, publishNote, fetchNote, markNoteRead } = useNoteStore()
   const { user } = useAuthStore()
   const [replyContent, setReplyContent] = useState('')
   const [isSending, setIsSending] = useState(false)
@@ -32,6 +32,14 @@ export default function NoteThread() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const isAdmin = user?.role === 'ADMIN'
+
+  const [editingNoteContent, setEditingNoteContent] = useState<string | null>(null)
+  const [editingNoteTitle, setEditingNoteTitle] = useState<string | null>(null)
+  const [isSavingNote, setIsSavingNote] = useState(false)
+  const [editingReplyId, setEditingReplyId] = useState<string | null>(null)
+  const [editingReplyContent, setEditingReplyContent] = useState('')
+  const [isSavingReply, setIsSavingReply] = useState(false)
+  const [isPublishing, setIsPublishing] = useState(false)
 
   useEffect(() => {
     if (activeNote?.id) {
@@ -47,6 +55,9 @@ export default function NoteThread() {
   if (!activeNote) return null
 
   const color = activeNote.color as NoteColor
+  const isNoteOwner = user?.id === activeNote.userId
+  const isDraft = activeNote.status === 'DRAFT'
+  const isEditingNote = editingNoteContent !== null
 
   const handleSendReply = async () => {
     if (!replyContent.trim() || isSending) return
@@ -69,31 +80,128 @@ export default function NoteThread() {
     }
   }
 
+  const handleStartEditNote = () => {
+    setEditingNoteContent(activeNote.content)
+    setEditingNoteTitle(activeNote.title)
+  }
+
+  const handleCancelEditNote = () => {
+    setEditingNoteContent(null)
+    setEditingNoteTitle(null)
+  }
+
+  const handleSaveNote = async () => {
+    if (isSavingNote) return
+    const newTitle = editingNoteTitle?.trim() ?? activeNote.title
+    const newContent = editingNoteContent?.trim() ?? activeNote.content
+    if (!newContent) return
+
+    if (newTitle === activeNote.title && newContent === activeNote.content) {
+      handleCancelEditNote()
+      return
+    }
+
+    setIsSavingNote(true)
+    try {
+      await updateNote(activeNote.id, { title: newTitle, content: newContent })
+      handleCancelEditNote()
+    } catch {
+      // error handled in store
+    } finally {
+      setIsSavingNote(false)
+    }
+  }
+
+  const handlePublish = async () => {
+    if (isPublishing) return
+    setIsPublishing(true)
+    try {
+      await publishNote(activeNote.id)
+    } catch {
+      // error handled in store
+    } finally {
+      setIsPublishing(false)
+    }
+  }
+
+  const handleStartEditReply = (replyId: string, content: string) => {
+    setEditingReplyId(replyId)
+    setEditingReplyContent(content)
+  }
+
+  const handleCancelEditReply = () => {
+    setEditingReplyId(null)
+    setEditingReplyContent('')
+  }
+
+  const handleSaveReply = async () => {
+    if (isSavingReply || !editingReplyId) return
+    const newContent = editingReplyContent.trim()
+    if (!newContent) return
+
+    const originalReply = activeNote.replies?.find((r) => r.id === editingReplyId)
+    if (originalReply && newContent === originalReply.content) {
+      handleCancelEditReply()
+      return
+    }
+
+    setIsSavingReply(true)
+    try {
+      await updateReply(activeNote.id, editingReplyId, newContent)
+      handleCancelEditReply()
+    } catch {
+      // error handled in store
+    } finally {
+      setIsSavingReply(false)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[85vh]">
         <div className={`flex items-center justify-between px-5 py-4 border-b rounded-t-2xl ${colorAccent[color]}`}>
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-bold text-gray-800 truncate">
-              {activeNote.title || '无标题'}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-gray-800 truncate">
+                {activeNote.title || '无标题'}
+              </h2>
+              {isDraft && (
+                <span className="px-2 py-0.5 bg-gray-600 text-white text-xs font-medium rounded-full flex-shrink-0">
+                  草稿
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <span>{activeNote.user?.displayName}</span>
               <span>·</span>
               <span>{new Date(activeNote.createdAt).toLocaleString('zh-CN')}</span>
             </div>
           </div>
-          <button
-            onClick={() => setActiveNote(null)}
-            className="ml-3 p-2 hover:bg-black/5 rounded-full transition-colors flex-shrink-0"
-          >
-            <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+            {isDraft && isNoteOwner && (
+              <button
+                onClick={handlePublish}
+                disabled={isPublishing}
+                className="px-3 py-1.5 text-sm bg-gradient-to-r from-primary-500 to-primary-600 
+                  text-white rounded-lg hover:from-primary-600 hover:to-primary-700 
+                  disabled:opacity-50 transition-all font-medium"
+              >
+                {isPublishing ? '发布中...' : '发布'}
+              </button>
+            )}
+            <button
+              onClick={() => setActiveNote(null)}
+              className="p-2 hover:bg-black/5 rounded-full transition-colors"
+            >
+              <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          {/* Note content */}
           <div className="flex gap-3">
             <UserAvatar
               displayName={activeNote.user?.displayName}
@@ -109,16 +217,67 @@ export default function NoteThread() {
                 <span className="text-xs text-gray-400">
                   {new Date(activeNote.createdAt).toLocaleString('zh-CN')}
                 </span>
+                {isNoteOwner && !isEditingNote && (
+                  <button
+                    onClick={handleStartEditNote}
+                    className="ml-auto p-1 hover:bg-black/5 rounded transition-colors flex-shrink-0"
+                    title="编辑"
+                  >
+                    <svg className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                )}
               </div>
-              <div className={`rounded-xl px-4 py-3 ${colorAccent[color]}`}>
-                <p className="text-gray-800 whitespace-pre-wrap break-words">{activeNote.content}</p>
-              </div>
+              {isEditingNote ? (
+                <div className={`rounded-xl px-4 py-3 ${colorAccent[color]} space-y-2`}>
+                  <input
+                    type="text"
+                    value={editingNoteTitle ?? ''}
+                    onChange={(e) => setEditingNoteTitle(e.target.value)}
+                    placeholder="标题（可选）"
+                    maxLength={100}
+                    className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm
+                      focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all bg-white"
+                  />
+                  <textarea
+                    value={editingNoteContent ?? ''}
+                    onChange={(e) => setEditingNoteContent(e.target.value)}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg resize-none text-sm
+                      focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all bg-white"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={handleCancelEditNote}
+                      className="px-3 py-1 text-xs bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      取消
+                    </button>
+                    <button
+                      onClick={handleSaveNote}
+                      disabled={isSavingNote || !editingNoteContent?.trim()}
+                      className="px-3 py-1 text-xs bg-primary-500 text-white rounded-lg hover:bg-primary-600 
+                        disabled:opacity-50 transition-colors"
+                    >
+                      {isSavingNote ? '保存中...' : '保存'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className={`rounded-xl px-4 py-3 ${colorAccent[color]}`}>
+                  <p className="text-gray-800 whitespace-pre-wrap break-words">{activeNote.content}</p>
+                </div>
+              )}
             </div>
           </div>
 
+          {/* Replies */}
           {activeNote.replies?.map((reply) => {
             const isMe = reply.userId === user?.id
             const canDelete = isMe || isAdmin
+            const isEditingThis = editingReplyId === reply.id
             return (
               <div key={reply.id} className="group flex gap-3">
                 <UserAvatar
@@ -135,46 +294,91 @@ export default function NoteThread() {
                     <span className="text-xs text-gray-400 whitespace-nowrap">
                       {new Date(reply.createdAt).toLocaleString('zh-CN')}
                     </span>
-                    {canDelete && confirmDeleteId !== reply.id && (
-                      <button
-                        onClick={() => setConfirmDeleteId(reply.id)}
-                        className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 ml-auto p-1 hover:bg-red-50 rounded transition-all flex-shrink-0"
-                        title="删除回复"
-                      >
-                        <svg className="w-3.5 h-3.5 text-gray-300 sm:text-gray-400 hover:text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    )}
-                    {confirmDeleteId === reply.id && (
-                      <span className="ml-auto flex items-center gap-1 flex-shrink-0 whitespace-nowrap">
-                        <button
-                          onClick={async () => {
-                            setDeletingReplyId(reply.id)
-                            try {
-                              await deleteReply(activeNote.id, reply.id)
-                            } catch { /* handled in store */ }
-                            setDeletingReplyId(null)
-                            setConfirmDeleteId(null)
-                          }}
-                          disabled={deletingReplyId === reply.id}
-                          className="text-xs leading-none px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors disabled:opacity-50"
-                        >
-                          {deletingReplyId === reply.id ? '...' : '删除'}
-                        </button>
-                        <button
-                          onClick={() => setConfirmDeleteId(null)}
-                          className="text-xs leading-none px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
-                        >
-                          取消
-                        </button>
+                    {!isEditingThis && (
+                      <span className="ml-auto flex items-center gap-1 flex-shrink-0">
+                        {isMe && confirmDeleteId !== reply.id && (
+                          <button
+                            onClick={() => handleStartEditReply(reply.id, reply.content)}
+                            className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1 hover:bg-black/5 rounded transition-all"
+                            title="编辑回复"
+                          >
+                            <svg className="w-3.5 h-3.5 text-gray-300 sm:text-gray-400 hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                        )}
+                        {canDelete && confirmDeleteId !== reply.id && (
+                          <button
+                            onClick={() => setConfirmDeleteId(reply.id)}
+                            className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1 hover:bg-red-50 rounded transition-all"
+                            title="删除回复"
+                          >
+                            <svg className="w-3.5 h-3.5 text-gray-300 sm:text-gray-400 hover:text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        )}
+                        {confirmDeleteId === reply.id && (
+                          <>
+                            <button
+                              onClick={async () => {
+                                setDeletingReplyId(reply.id)
+                                try {
+                                  await deleteReply(activeNote.id, reply.id)
+                                } catch { /* handled in store */ }
+                                setDeletingReplyId(null)
+                                setConfirmDeleteId(null)
+                              }}
+                              disabled={deletingReplyId === reply.id}
+                              className="text-xs leading-none px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors disabled:opacity-50"
+                            >
+                              {deletingReplyId === reply.id ? '...' : '删除'}
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="text-xs leading-none px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
+                            >
+                              取消
+                            </button>
+                          </>
+                        )}
                       </span>
                     )}
                   </div>
-                  <div className={`rounded-xl px-4 py-3 ${isMe ? 'bg-primary-50 border border-primary-100' : 'bg-gray-50 border border-gray-100'}`}>
-                    <p className="text-gray-800 whitespace-pre-wrap break-words">{reply.content}</p>
-                  </div>
+                  {isEditingThis ? (
+                    <div className={`rounded-xl px-4 py-3 ${isMe ? 'bg-primary-50 border border-primary-100' : 'bg-gray-50 border border-gray-100'} space-y-2`}>
+                      <textarea
+                        value={editingReplyContent}
+                        onChange={(e) => setEditingReplyContent(e.target.value)}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg resize-none text-sm
+                          focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all bg-white"
+                        autoFocus
+                      />
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={handleCancelEditReply}
+                          className="px-3 py-1 text-xs bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                          取消
+                        </button>
+                        <button
+                          onClick={handleSaveReply}
+                          disabled={isSavingReply || !editingReplyContent.trim()}
+                          className="px-3 py-1 text-xs bg-primary-500 text-white rounded-lg hover:bg-primary-600 
+                            disabled:opacity-50 transition-colors"
+                        >
+                          {isSavingReply ? '保存中...' : '保存'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={`rounded-xl px-4 py-3 ${isMe ? 'bg-primary-50 border border-primary-100' : 'bg-gray-50 border border-gray-100'}`}>
+                      <p className="text-gray-800 whitespace-pre-wrap break-words">{reply.content}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )
@@ -183,42 +387,45 @@ export default function NoteThread() {
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="border-t px-5 py-3">
-          <div className="flex gap-2">
-            <textarea
-              ref={textareaRef}
-              value={replyContent}
-              onChange={(e) => setReplyContent(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="输入回复... (Enter 发送, Shift+Enter 换行)"
-              rows={1}
-              className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl resize-none
-                focus:border-primary-400 focus:ring-2 focus:ring-primary-100 
-                transition-all duration-200 bg-gray-50 text-sm"
-            />
-            <button
-              onClick={handleSendReply}
-              disabled={!replyContent.trim() || isSending}
-              className="px-3 sm:px-4 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 
-                text-white rounded-xl hover:from-primary-600 hover:to-primary-700 
-                disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 
-                flex items-center gap-1 text-sm font-medium flex-shrink-0 whitespace-nowrap"
-            >
-              {isSending ? (
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-              )}
-              发送
-            </button>
+        {/* Reply input — hidden for drafts since only the owner sees them */}
+        {!isDraft && (
+          <div className="border-t px-5 py-3">
+            <div className="flex gap-2">
+              <textarea
+                ref={textareaRef}
+                value={replyContent}
+                onChange={(e) => setReplyContent(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="输入回复... (Enter 发送, Shift+Enter 换行)"
+                rows={1}
+                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl resize-none
+                  focus:border-primary-400 focus:ring-2 focus:ring-primary-100 
+                  transition-all duration-200 bg-gray-50 text-sm"
+              />
+              <button
+                onClick={handleSendReply}
+                disabled={!replyContent.trim() || isSending}
+                className="px-3 sm:px-4 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 
+                  text-white rounded-xl hover:from-primary-600 hover:to-primary-700 
+                  disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 
+                  flex items-center gap-1 text-sm font-medium flex-shrink-0 whitespace-nowrap"
+              >
+                {isSending ? (
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                )}
+                发送
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

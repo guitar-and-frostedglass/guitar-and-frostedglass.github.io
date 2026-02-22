@@ -43,8 +43,10 @@ interface NoteState {
   fetchNote: (id: string) => Promise<void>
   createNote: (data: CreateNoteRequest) => Promise<Note>
   updateNote: (id: string, data: UpdateNoteRequest) => Promise<void>
+  publishNote: (id: string) => Promise<void>
   deleteNote: (id: string) => Promise<void>
   createReply: (noteId: string, content: string) => Promise<Reply>
+  updateReply: (noteId: string, replyId: string, content: string) => Promise<void>
   deleteReply: (noteId: string, replyId: string) => Promise<void>
   setActiveNote: (note: Note | null) => void
   markNoteRead: (noteId: string) => void
@@ -108,9 +110,30 @@ export const useNoteStore = create<NoteState>((set, get) => ({
         notes: state.notes.map((note) =>
           note.id === id ? updatedNote : note
         ),
+        activeNote: state.activeNote?.id === id
+          ? { ...state.activeNote, ...updatedNote, replies: state.activeNote.replies }
+          : state.activeNote,
       }))
     } catch (error) {
       const message = error instanceof Error ? error.message : '更新便签失败'
+      set({ error: message })
+      throw error
+    }
+  },
+
+  publishNote: async (id: string) => {
+    try {
+      const publishedNote = await noteService.publishNote(id)
+      set((state) => ({
+        notes: state.notes.map((note) =>
+          note.id === id ? publishedNote : note
+        ).sort((a, b) => new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime()),
+        activeNote: state.activeNote?.id === id
+          ? { ...state.activeNote, ...publishedNote, replies: state.activeNote.replies }
+          : state.activeNote,
+      }))
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '发布便签失败'
       set({ error: message })
       throw error
     }
@@ -160,6 +183,27 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       return reply
     } catch (error) {
       const message = error instanceof Error ? error.message : '回复失败'
+      set({ error: message })
+      throw error
+    }
+  },
+
+  updateReply: async (noteId: string, replyId: string, content: string) => {
+    try {
+      const updatedReply = await noteService.updateReply(noteId, replyId, { content })
+      const { activeNote } = get()
+      if (activeNote && activeNote.id === noteId && activeNote.replies) {
+        set({
+          activeNote: {
+            ...activeNote,
+            replies: activeNote.replies.map((r) =>
+              r.id === replyId ? { ...r, ...updatedReply } : r
+            ),
+          },
+        })
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '编辑回复失败'
       set({ error: message })
       throw error
     }

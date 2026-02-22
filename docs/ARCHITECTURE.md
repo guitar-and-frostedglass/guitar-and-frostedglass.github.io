@@ -159,12 +159,14 @@ Certbot auto-modified the nginx config to add the `listen 443 ssl` block and red
 | PUT | `/api/auth/avatar` | Yes | No | Upload avatar (base64 data URI, max 500KB) |
 | PUT | `/api/auth/password` | Yes | No | Change password (requires current password) |
 | PUT | `/api/auth/profile` | Yes | No | Update display name and email (both must be unique) |
-| GET | `/api/notes` | Yes | No | List all notes (all users, with reply counts) |
-| GET | `/api/notes/:id` | Yes | No | Get single note with all replies |
-| POST | `/api/notes` | Yes | No | Create note (title + content + color) |
-| PUT | `/api/notes/:id` | Yes | No | Update own note |
+| GET | `/api/notes` | Yes | No | List all published notes + own drafts (with reply counts) |
+| GET | `/api/notes/:id` | Yes | No | Get single note with all replies (drafts only visible to owner) |
+| POST | `/api/notes` | Yes | No | Create note (title + content + color + isDraft) |
+| PUT | `/api/notes/:id` | Yes | No | Update own note (saves edit history for published notes) |
+| PUT | `/api/notes/:id/publish` | Yes | No | Publish own draft note |
 | DELETE | `/api/notes/:id` | Yes | No | Delete own note |
 | POST | `/api/notes/:id/replies` | Yes | No | Reply to any note |
+| PUT | `/api/notes/:id/replies/:replyId` | Yes | No | Edit own reply (saves edit history) |
 | DELETE | `/api/notes/:id/replies/:replyId` | Yes | No | Delete own reply (admin can delete any) |
 | GET | `/api/admin/users` | Yes | Yes | List all registered users |
 | DELETE | `/api/admin/users/:id` | Yes | Yes | Delete a user |
@@ -189,8 +191,9 @@ Certbot auto-modified the nginx config to add the `listen 443 ssl` block and red
 - `title` (text, default "")
 - `content` (text, default "")
 - `color` (string, default "yellow")
+- `status` (enum: `DRAFT`, `PUBLISHED`, default `PUBLISHED`)
 - `position_x`, `position_y` (int, legacy — unused in current UI)
-- `last_activity_at` (timestamp, default now — updated when a reply is created; used to sort notes by most recent activity)
+- `last_activity_at` (timestamp, default now — updated when a reply is created or note is published; used to sort notes by most recent activity)
 - `user_id` (FK → users.id, cascade delete)
 - `created_at`, `updated_at`
 
@@ -200,6 +203,23 @@ Certbot auto-modified the nginx config to add the `listen 443 ssl` block and red
 - `note_id` (FK → notes.id, cascade delete)
 - `user_id` (FK → users.id, cascade delete)
 - `created_at`, `updated_at`
+
+**note_edit_history** table (audit log for note edits):
+- `id` (UUID, PK)
+- `note_id` (FK → notes.id, cascade delete)
+- `title` (text — title before the edit)
+- `content` (text — content before the edit)
+- `edited_by_id` (UUID of the user who made the edit)
+- `edited_by_name` (text — denormalized display name)
+- `edited_at` (timestamp)
+
+**reply_edit_history** table (audit log for reply edits):
+- `id` (UUID, PK)
+- `reply_id` (FK → replies.id, cascade delete)
+- `content` (text — content before the edit)
+- `edited_by_id` (UUID of the user who made the edit)
+- `edited_by_name` (text — denormalized display name)
+- `edited_at` (timestamp)
 
 **invite_codes** table:
 - `id` (UUID, PK)

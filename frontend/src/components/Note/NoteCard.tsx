@@ -33,6 +33,7 @@ export default function NoteCard({ note }: NoteCardProps) {
   const isOwner = user?.id === note.userId
   const isAdmin = user?.role === 'ADMIN'
   const canDelete = isOwner || isAdmin
+  const isDraft = note.status === 'DRAFT'
   const unread = isNoteUnread(note.id)
 
   const handleClick = async () => {
@@ -54,8 +55,14 @@ export default function NoteCard({ note }: NoteCardProps) {
     <div
       onClick={handleClick}
       className={`relative rounded-xl border-2 p-4 cursor-pointer transition-all duration-200 
-        hover:shadow-md hover:-translate-y-0.5 note-appear ${colorClasses[note.color]}`}
+        hover:shadow-md hover:-translate-y-0.5 note-appear ${colorClasses[note.color]}
+        ${isDraft ? 'border-dashed opacity-85' : ''}`}
     >
+      {isDraft && (
+        <div className="absolute -top-2.5 left-3 px-2 py-0.5 bg-gray-600 text-white text-xs font-medium rounded-full">
+          草稿
+        </div>
+      )}
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2 min-w-0">
           <UserAvatar

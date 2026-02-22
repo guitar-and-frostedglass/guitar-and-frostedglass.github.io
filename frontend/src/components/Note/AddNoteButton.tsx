@@ -20,11 +20,14 @@ export default function AddNoteButton() {
   const [content, setContent] = useState('')
   const [color, setColor] = useState<NoteColor>('yellow')
 
-  const handleCreate = async () => {
-    if (isCreating || !content.trim()) return
-    setIsCreating(true)
+  const [isSavingDraft, setIsSavingDraft] = useState(false)
+
+  const handleCreate = async (isDraft = false) => {
+    if (isCreating || isSavingDraft || !content.trim()) return
+    if (isDraft) setIsSavingDraft(true)
+    else setIsCreating(true)
     try {
-      await createNote({ title: title.trim(), content: content.trim(), color })
+      await createNote({ title: title.trim(), content: content.trim(), color, isDraft })
       setShowModal(false)
       setTitle('')
       setContent('')
@@ -33,6 +36,7 @@ export default function AddNoteButton() {
       console.error('Failed to create note:', error)
     } finally {
       setIsCreating(false)
+      setIsSavingDraft(false)
     }
   }
 
@@ -117,8 +121,17 @@ export default function AddNoteButton() {
                 取消
               </button>
               <button
-                onClick={handleCreate}
-                disabled={!content.trim() || isCreating}
+                onClick={() => handleCreate(true)}
+                disabled={!content.trim() || isCreating || isSavingDraft}
+                className="px-4 py-2 text-sm border border-gray-300 text-gray-700
+                  rounded-xl hover:bg-gray-50
+                  disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
+              >
+                {isSavingDraft ? '保存中...' : '存为草稿'}
+              </button>
+              <button
+                onClick={() => handleCreate(false)}
+                disabled={!content.trim() || isCreating || isSavingDraft}
                 className="px-5 py-2 text-sm bg-gradient-to-r from-primary-500 to-primary-600 
                   text-white rounded-xl hover:from-primary-600 hover:to-primary-700 
                   disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"

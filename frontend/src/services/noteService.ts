@@ -1,5 +1,5 @@
 import api from './api'
-import type { Note, Reply, CreateNoteRequest, UpdateNoteRequest, CreateReplyRequest, ApiResponse } from '../../../shared/types'
+import type { Note, Reply, CreateNoteRequest, UpdateNoteRequest, UpdateReplyRequest, CreateReplyRequest, ApiResponse } from '../../../shared/types'
 
 export const noteService = {
   async getNotes(): Promise<Note[]> {
@@ -34,6 +34,14 @@ export const noteService = {
     throw new Error(response.data.error || '更新便签失败')
   },
 
+  async publishNote(id: string): Promise<Note> {
+    const response = await api.put<ApiResponse<Note>>(`/notes/${id}/publish`)
+    if (response.data.success && response.data.data) {
+      return response.data.data
+    }
+    throw new Error(response.data.error || '发布便签失败')
+  },
+
   async deleteNote(id: string): Promise<void> {
     const response = await api.delete<ApiResponse<void>>(`/notes/${id}`)
     if (!response.data.success) {
@@ -47,6 +55,14 @@ export const noteService = {
       return response.data.data
     }
     throw new Error(response.data.error || '回复失败')
+  },
+
+  async updateReply(noteId: string, replyId: string, data: UpdateReplyRequest): Promise<Reply> {
+    const response = await api.put<ApiResponse<Reply>>(`/notes/${noteId}/replies/${replyId}`, data)
+    if (response.data.success && response.data.data) {
+      return response.data.data
+    }
+    throw new Error(response.data.error || '编辑回复失败')
   },
 
   async deleteReply(noteId: string, replyId: string): Promise<void> {
