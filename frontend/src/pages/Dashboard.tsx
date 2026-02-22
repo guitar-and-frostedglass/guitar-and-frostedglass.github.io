@@ -6,7 +6,7 @@ import NoteBoard from '../components/Note/NoteBoard'
 import AddNoteButton from '../components/Note/AddNoteButton'
 
 export default function Dashboard() {
-  const { user } = useAuthStore()
+  const { user: _user } = useAuthStore()
   const { fetchNotes, isLoading, error } = useNoteStore()
 
   useEffect(() => {

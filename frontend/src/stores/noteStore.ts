@@ -16,7 +16,7 @@ interface NoteState {
   clearNotes: () => void
 }
 
-export const useNoteStore = create<NoteState>((set, get) => ({
+export const useNoteStore = create<NoteState>((set, _get) => ({
   notes: [],
   isLoading: false,
   error: null,
