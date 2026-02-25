@@ -5,22 +5,23 @@ import NoteCard from './NoteCard'
 
 type TabKey = 'all' | 'recent' | 'unread' | 'drafts'
 
-const RECENT_DAYS = 7
-
 export default function NoteBoard() {
-  const { notes, isNoteUnread } = useNoteStore()
+  const { notes, isNoteUnread, readCounts } = useNoteStore()
   const { user } = useAuthStore()
   const [activeTab, setActiveTab] = useState<TabKey>('all')
 
   const published = notes.filter((n) => n.status === 'PUBLISHED')
   const drafts = notes.filter((n) => n.status === 'DRAFT')
-  const recentCutoff = Date.now() - RECENT_DAYS * 86_400_000
-  const recent = published.filter((n) => new Date(n.createdAt).getTime() > recentCutoff)
+  const recent = published.filter((n) => {
+    const neverOpened = readCounts[n.id] === undefined
+    const noReplies = (n._count?.replies ?? 0) === 0
+    return neverOpened && noReplies
+  })
   const unread = published.filter((n) => isNoteUnread(n.id))
 
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: 'all', label: '全部' },
-    { key: 'recent', label: '最新' },
+    { key: 'recent', label: '最新', count: recent.length },
     { key: 'unread', label: '未读', count: unread.length },
     { key: 'drafts', label: '草稿', count: drafts.length },
   ]
@@ -36,7 +37,7 @@ export default function NoteBoard() {
 
   const emptyHints: Record<TabKey, { icon: string; title: string; sub: string }> = {
     all: { icon: '📝', title: '还没有便签', sub: '点击右下角的 + 按钮创建第一个话题' },
-    recent: { icon: '🕐', title: '暂无最新便签', sub: `最近 ${RECENT_DAYS} 天内没有新创建的便签` },
+    recent: { icon: '🆕', title: '没有新便签', sub: '所有便签都已阅读或已有回复' },
     unread: { icon: '✅', title: '全部已读', sub: '没有包含未读回复的便签' },
     drafts: { icon: '📄', title: '没有草稿', sub: '创建便签时可以选择存为草稿' },
   }
