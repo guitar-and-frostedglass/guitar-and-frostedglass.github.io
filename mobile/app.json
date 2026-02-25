@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "Guitar & Frosted Glass",
+    "slug": "guitar-and-frostedglass",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFF7ED"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.guitarandfrostedglass.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFF7ED"
+      },
+      "package": "com.guitarandfrostedglass.app"
+    }
+  }
+}

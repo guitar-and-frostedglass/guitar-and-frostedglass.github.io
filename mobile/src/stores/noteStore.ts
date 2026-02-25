@@ -3,12 +3,12 @@ import { createNoteStoreSlice } from '../../../shared/stores/noteStore'
 import type { NoteState } from '../../../shared/stores/noteStore'
 import { noteService } from '../services/noteService'
 import { useAuthStore } from './authStore'
-import { webPersistStorage } from '../platform'
+import { mobilePersistStorage } from '../platform'
 
-export const useNoteStore = create<NoteState>(
+export const useNoteStore = create<NoteState>()(
   createNoteStoreSlice(
     noteService,
     () => useAuthStore.getState().user?.id ?? null,
-    webPersistStorage,
+    mobilePersistStorage,
   ) as any,
 )
