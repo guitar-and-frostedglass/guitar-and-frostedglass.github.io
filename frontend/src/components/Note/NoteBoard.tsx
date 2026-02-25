@@ -1,13 +1,11 @@
 import { useState } from 'react'
 import { useNoteStore } from '../../stores/noteStore'
-import { useAuthStore } from '../../stores/authStore'
 import NoteCard from './NoteCard'
 
 type TabKey = 'all' | 'recent' | 'unread' | 'drafts'
 
 export default function NoteBoard() {
   const { notes, isNoteUnread, readCounts } = useNoteStore()
-  const { user } = useAuthStore()
   const [activeTab, setActiveTab] = useState<TabKey>('all')
 
   const published = notes.filter((n) => n.status === 'PUBLISHED')
