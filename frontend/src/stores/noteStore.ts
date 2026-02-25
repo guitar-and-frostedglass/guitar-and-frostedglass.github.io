@@ -1,27 +1,25 @@
 import { create } from 'zustand'
+import { useAuthStore } from './authStore'
 import { noteService } from '../services/noteService'
 import type { Note, Reply, CreateNoteRequest, UpdateNoteRequest } from '../../../shared/types'
 
 const READ_COUNTS_PREFIX = 'gfg_read_counts_'
 
 function getUserId(): string | null {
-  try {
-    const raw = sessionStorage.getItem('user')
-    if (!raw) return null
-    return JSON.parse(raw).id
-  } catch {
-    return null
-  }
+  return useAuthStore.getState().user?.id ?? null
 }
 
 function getStorageKey(): string {
   const userId = getUserId()
-  return `${READ_COUNTS_PREFIX}${userId ?? 'anon'}`
+  if (!userId) return ''
+  return `${READ_COUNTS_PREFIX}${userId}`
 }
 
 function loadReadCounts(): Record<string, number> {
+  const key = getStorageKey()
+  if (!key) return {}
   try {
-    const raw = localStorage.getItem(getStorageKey())
+    const raw = localStorage.getItem(key)
     return raw ? JSON.parse(raw) : {}
   } catch {
     return {}
@@ -29,7 +27,9 @@ function loadReadCounts(): Record<string, number> {
 }
 
 function saveReadCounts(counts: Record<string, number>) {
-  localStorage.setItem(getStorageKey(), JSON.stringify(counts))
+  const key = getStorageKey()
+  if (!key) return
+  localStorage.setItem(key, JSON.stringify(counts))
 }
 
 interface NoteState {
@@ -61,7 +61,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   activeNote: null,
   isLoading: false,
   error: null,
-  readCounts: loadReadCounts(),
+  readCounts: {},
 
   fetchNotes: async () => {
     set({ isLoading: true, error: null })
