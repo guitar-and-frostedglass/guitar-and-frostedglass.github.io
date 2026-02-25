@@ -60,6 +60,14 @@ export async function getNote(
             user: {
               select: { id: true, displayName: true, avatar: true },
             },
+            replyTo: {
+              select: {
+                id: true,
+                content: true,
+                userId: true,
+                user: { select: { id: true, displayName: true, avatar: true } },
+              },
+            },
           },
         },
       },
@@ -260,17 +268,32 @@ export async function createReply(
     if (!userId) throw createError('未认证', 401)
 
     const noteId = req.params.id
-    const { content } = req.body
+    const { content, replyToId } = req.body
 
     const note = await prisma.note.findUnique({ where: { id: noteId } })
     if (!note) throw createError('便签不存在', 404)
 
+    if (replyToId) {
+      const target = await prisma.reply.findUnique({ where: { id: replyToId } })
+      if (!target || target.noteId !== noteId) {
+        throw createError('引用的回复不存在或不属于该便签', 400)
+      }
+    }
+
     const [reply] = await prisma.$transaction([
       prisma.reply.create({
-        data: { content, noteId, userId },
+        data: { content, noteId, userId, ...(replyToId && { replyToId }) },
         include: {
           user: {
             select: { id: true, displayName: true, avatar: true },
+          },
+          replyTo: {
+            select: {
+              id: true,
+              content: true,
+              userId: true,
+              user: { select: { id: true, displayName: true, avatar: true } },
+            },
           },
         },
       }),

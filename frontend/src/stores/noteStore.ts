@@ -45,7 +45,7 @@ interface NoteState {
   updateNote: (id: string, data: UpdateNoteRequest) => Promise<void>
   publishNote: (id: string) => Promise<void>
   deleteNote: (id: string) => Promise<void>
-  createReply: (noteId: string, content: string) => Promise<Reply>
+  createReply: (noteId: string, content: string, replyToId?: string) => Promise<Reply>
   updateReply: (noteId: string, replyId: string, content: string) => Promise<void>
   deleteReply: (noteId: string, replyId: string) => Promise<void>
   setActiveNote: (note: Note | null) => void
@@ -157,9 +157,9 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     }
   },
 
-  createReply: async (noteId: string, content: string) => {
+  createReply: async (noteId: string, content: string, replyToId?: string) => {
     try {
-      const reply = await noteService.createReply(noteId, { content })
+      const reply = await noteService.createReply(noteId, { content, ...(replyToId && { replyToId }) })
       const { activeNote } = get()
       if (activeNote && activeNote.id === noteId && activeNote.replies) {
         set({

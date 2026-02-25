@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNoteStore } from '../../stores/noteStore'
 import { useAuthStore } from '../../stores/authStore'
-import type { NoteColor } from '../../../../shared/types'
+import type { NoteColor, Reply } from '../../../../shared/types'
 import UserAvatar from '../UserAvatar'
 
 const colorAccent: Record<NoteColor, string> = {
@@ -40,6 +40,7 @@ export default function NoteThread() {
   const [editingReplyContent, setEditingReplyContent] = useState('')
   const [isSavingReply, setIsSavingReply] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
+  const [replyingTo, setReplyingTo] = useState<Reply | null>(null)
 
   useEffect(() => {
     if (activeNote?.id) {
@@ -63,8 +64,9 @@ export default function NoteThread() {
     if (!replyContent.trim() || isSending) return
     setIsSending(true)
     try {
-      await createReply(activeNote.id, replyContent.trim())
+      await createReply(activeNote.id, replyContent.trim(), replyingTo?.id)
       setReplyContent('')
+      setReplyingTo(null)
       textareaRef.current?.focus()
     } catch {
       // error handled in store
@@ -72,6 +74,11 @@ export default function NoteThread() {
       setIsSending(false)
     }
   }
+
+  const handleReplyTo = useCallback((reply: Reply) => {
+    setReplyingTo(reply)
+    textareaRef.current?.focus()
+  }, [])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -296,6 +303,18 @@ export default function NoteThread() {
                     </span>
                     {!isEditingThis && (
                       <span className="ml-auto flex items-center gap-1 flex-shrink-0">
+                        {!isDraft && confirmDeleteId !== reply.id && (
+                          <button
+                            onClick={() => handleReplyTo(reply)}
+                            className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1 hover:bg-black/5 rounded transition-all"
+                            title="引用回复"
+                          >
+                            <svg className="w-3.5 h-3.5 text-gray-300 sm:text-gray-400 hover:text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M3 10h10a5 5 0 015 5v6M3 10l6 6M3 10l6-6" />
+                            </svg>
+                          </button>
+                        )}
                         {isMe && confirmDeleteId !== reply.id && (
                           <button
                             onClick={() => handleStartEditReply(reply.id, reply.content)}
@@ -376,6 +395,21 @@ export default function NoteThread() {
                     </div>
                   ) : (
                     <div className={`rounded-xl px-4 py-3 ${isMe ? 'bg-primary-50 border border-primary-100' : 'bg-gray-50 border border-gray-100'}`}>
+                      {reply.replyTo && (
+                        <div className="mb-2 pl-3 border-l-2 border-gray-300 rounded-sm">
+                          <p className="text-xs font-medium text-gray-500">
+                            {reply.replyTo.user?.displayName}
+                          </p>
+                          <p className="text-xs text-gray-400 line-clamp-2 whitespace-pre-wrap break-words">
+                            {reply.replyTo.content}
+                          </p>
+                        </div>
+                      )}
+                      {reply.replyToId && !reply.replyTo && (
+                        <div className="mb-2 pl-3 border-l-2 border-gray-200 rounded-sm">
+                          <p className="text-xs text-gray-400 italic">该回复已被删除</p>
+                        </div>
+                      )}
                       <p className="text-gray-800 whitespace-pre-wrap break-words">{reply.content}</p>
                     </div>
                   )}
@@ -387,16 +421,35 @@ export default function NoteThread() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Reply input — hidden for drafts since only the owner sees them */}
         {!isDraft && (
           <div className="border-t px-5 py-3">
+            {replyingTo && (
+              <div className="flex items-start gap-2 mb-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-primary-600">
+                    回复 {replyingTo.user?.displayName}
+                  </p>
+                  <p className="text-xs text-gray-500 line-clamp-2 whitespace-pre-wrap break-words">
+                    {replyingTo.content}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setReplyingTo(null)}
+                  className="p-0.5 hover:bg-gray-200 rounded transition-colors flex-shrink-0"
+                >
+                  <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
             <div className="flex gap-2">
               <textarea
                 ref={textareaRef}
                 value={replyContent}
                 onChange={(e) => setReplyContent(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="输入回复... (Enter 发送, Shift+Enter 换行)"
+                placeholder={replyingTo ? `回复 ${replyingTo.user?.displayName}...` : '输入回复... (Enter 发送, Shift+Enter 换行)'}
                 rows={1}
                 className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl resize-none
                   focus:border-primary-400 focus:ring-2 focus:ring-primary-100 

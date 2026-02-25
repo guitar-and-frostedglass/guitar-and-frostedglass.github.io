@@ -7,6 +7,13 @@ export interface NoteUser {
   avatar?: string | null
 }
 
+export interface ReplyTo {
+  id: string
+  content: string
+  userId: string
+  user: NoteUser
+}
+
 export interface Reply {
   id: string
   content: string
@@ -15,6 +22,8 @@ export interface Reply {
   noteId: string
   userId: string
   user: NoteUser
+  replyToId?: string | null
+  replyTo?: ReplyTo | null
 }
 
 export interface Note {
@@ -55,6 +64,7 @@ export interface UpdateReplyRequest {
 
 export interface CreateReplyRequest {
   content: string
+  replyToId?: string
 }
 
 export interface DeletedReply {

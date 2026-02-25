@@ -81,6 +81,11 @@ model Reply {
 
   userId String @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  replyToId String? @map("reply_to_id")
+  replyTo   Reply?  @relation("ReplyToReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  quotedBy  Reply[] @relation("ReplyToReply")
+
   editHistory ReplyEditHistory[]
 
   @@map("replies")

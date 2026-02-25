@@ -50,6 +50,10 @@ const replyValidation = [
     .trim()
     .isLength({ min: 1 })
     .withMessage('回复内容不能为空'),
+  body('replyToId')
+    .optional()
+    .isUUID()
+    .withMessage('无效的引用回复ID'),
 ]
 
 const deleteReplyValidation = [
