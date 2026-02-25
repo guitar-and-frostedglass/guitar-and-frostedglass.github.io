@@ -1,48 +1,93 @@
+import { useState } from 'react'
 import { useNoteStore } from '../../stores/noteStore'
+import { useAuthStore } from '../../stores/authStore'
 import NoteCard from './NoteCard'
 
+type TabKey = 'all' | 'recent' | 'unread' | 'drafts'
+
+const RECENT_DAYS = 7
+
 export default function NoteBoard() {
-  const { notes } = useNoteStore()
+  const { notes, isNoteUnread } = useNoteStore()
+  const { user } = useAuthStore()
+  const [activeTab, setActiveTab] = useState<TabKey>('all')
 
-  const drafts = notes.filter((n) => n.status === 'DRAFT')
   const published = notes.filter((n) => n.status === 'PUBLISHED')
+  const drafts = notes.filter((n) => n.status === 'DRAFT')
+  const recentCutoff = Date.now() - RECENT_DAYS * 86_400_000
+  const recent = published.filter((n) => new Date(n.createdAt).getTime() > recentCutoff)
+  const unread = published.filter((n) => isNoteUnread(n.id))
 
-  if (notes.length === 0) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center text-gray-500">
-          <div className="text-6xl mb-4">📝</div>
-          <p className="text-lg">还没有便签</p>
-          <p className="text-sm">点击右下角的 + 按钮创建第一个话题</p>
-        </div>
-      </div>
-    )
+  const tabs: { key: TabKey; label: string; count?: number }[] = [
+    { key: 'all', label: '全部' },
+    { key: 'recent', label: '最新' },
+    { key: 'unread', label: '未读', count: unread.length },
+    { key: 'drafts', label: '草稿', count: drafts.length },
+  ]
+
+  const filtered: typeof notes = (() => {
+    switch (activeTab) {
+      case 'recent': return recent
+      case 'unread': return unread
+      case 'drafts': return drafts
+      default: return published
+    }
+  })()
+
+  const emptyHints: Record<TabKey, { icon: string; title: string; sub: string }> = {
+    all: { icon: '📝', title: '还没有便签', sub: '点击右下角的 + 按钮创建第一个话题' },
+    recent: { icon: '🕐', title: '暂无最新便签', sub: `最近 ${RECENT_DAYS} 天内没有新创建的便签` },
+    unread: { icon: '✅', title: '全部已读', sub: '没有包含未读回复的便签' },
+    drafts: { icon: '📄', title: '没有草稿', sub: '创建便签时可以选择存为草稿' },
   }
 
+  const hint = emptyHints[activeTab]
+
   return (
-    <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
-      {drafts.length > 0 && (
-        <div>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            我的草稿 ({drafts.length})
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {drafts.map((note) => (
-              <NoteCard key={note.id} note={note} />
-            ))}
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-4">
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit">
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.key
+          const showBadge = tab.count !== undefined && tab.count > 0 && !isActive
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`relative px-3.5 py-1.5 text-sm font-medium rounded-lg transition-all duration-200
+                ${isActive
+                  ? 'bg-white text-gray-800 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-white/50'
+                }`}
+            >
+              {tab.label}
+              {showBadge && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center
+                  px-1 text-[10px] font-bold leading-none text-white bg-primary-500 rounded-full">
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Note grid */}
+      {filtered.length === 0 ? (
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center text-gray-500">
+            <div className="text-5xl mb-3">{hint.icon}</div>
+            <p className="text-lg">{hint.title}</p>
+            <p className="text-sm mt-1">{hint.sub}</p>
           </div>
         </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map((note) => (
+            <NoteCard key={note.id} note={note} />
+          ))}
+        </div>
       )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {published.map((note) => (
-          <NoteCard key={note.id} note={note} />
-        ))}
-      </div>
     </div>
   )
 }
