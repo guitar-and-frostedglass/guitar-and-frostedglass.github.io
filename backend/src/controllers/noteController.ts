@@ -102,7 +102,7 @@ export async function createNote(
     const userId = req.userId
     if (!userId) throw createError('未认证', 401)
 
-    const { title = '', content = '', color = 'yellow', isDraft = false, layer = 'SURFACE' } = req.body
+    const { title, content = '', color = 'yellow', isDraft = false, layer = 'SURFACE' } = req.body
     const status = isDraft ? 'DRAFT' : 'PUBLISHED'
     const noteLayer = layer === 'HIDDEN' ? 'HIDDEN' : 'SURFACE'
 

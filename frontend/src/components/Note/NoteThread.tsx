@@ -101,7 +101,7 @@ export default function NoteThread() {
     if (isSavingNote) return
     const newTitle = editingNoteTitle?.trim() ?? activeNote.title
     const newContent = editingNoteContent?.trim() ?? activeNote.content
-    if (!newContent) return
+    if (!newTitle) return
 
     if (newTitle === activeNote.title && newContent === activeNote.content) {
       handleCancelEditNote()
@@ -243,7 +243,7 @@ export default function NoteThread() {
                     type="text"
                     value={editingNoteTitle ?? ''}
                     onChange={(e) => setEditingNoteTitle(e.target.value)}
-                    placeholder="标题（可选）"
+                    placeholder="标题"
                     maxLength={100}
                     className="w-full px-3 py-1.5 border border-gray-200 dark:border-white/10 rounded-lg text-sm
                       focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50 transition-all bg-white dark:bg-white/5 dark:text-gray-200"
@@ -264,7 +264,7 @@ export default function NoteThread() {
                     </button>
                     <button
                       onClick={handleSaveNote}
-                      disabled={isSavingNote || !editingNoteContent?.trim()}
+                      disabled={isSavingNote || !editingNoteTitle?.trim()}
                       className="px-3 py-1 text-xs bg-primary-500 text-white rounded-lg hover:bg-primary-600 
                         disabled:opacity-50 transition-colors"
                     >
@@ -272,9 +272,13 @@ export default function NoteThread() {
                     </button>
                   </div>
                 </div>
-              ) : (
+              ) : activeNote.content ? (
                 <div className={`rounded-xl px-4 py-3 ${colorAccent[color]}`}>
                   <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">{activeNote.content}</p>
+                </div>
+              ) : (
+                <div className={`rounded-xl px-4 py-3 ${colorAccent[color]}`}>
+                  <p className="text-gray-400 dark:text-gray-500 italic text-sm">等待第一条回复...</p>
                 </div>
               )}
             </div>

@@ -9,8 +9,9 @@ router.use(authenticate)
 
 const createValidation = [
   body('title')
-    .optional()
-    .isString()
+    .trim()
+    .isLength({ min: 1 })
+    .withMessage('标题不能为空')
     .isLength({ max: 100 })
     .withMessage('标题最长100个字符'),
   body('content')
@@ -31,7 +32,9 @@ const updateValidation = [
   param('id').isUUID().withMessage('无效的便签ID'),
   body('title')
     .optional()
-    .isString()
+    .trim()
+    .isLength({ min: 1 })
+    .withMessage('标题不能为空')
     .isLength({ max: 100 })
     .withMessage('标题最长100个字符'),
   body('content')

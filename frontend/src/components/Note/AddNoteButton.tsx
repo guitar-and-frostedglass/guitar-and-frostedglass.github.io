@@ -25,11 +25,11 @@ export default function AddNoteButton() {
   const [isSavingDraft, setIsSavingDraft] = useState(false)
 
   const handleCreate = async (isDraft = false) => {
-    if (isCreating || isSavingDraft || !content.trim()) return
+    if (isCreating || isSavingDraft || !title.trim()) return
     if (isDraft) setIsSavingDraft(true)
     else setIsCreating(true)
     try {
-      await createNote({ title: title.trim(), content: content.trim(), color, isDraft, layer: currentLayer })
+      await createNote({ title: title.trim(), content: content.trim() || undefined, color, isDraft, layer: currentLayer })
       setShowModal(false)
       setTitle('')
       setContent('')
@@ -79,7 +79,7 @@ export default function AddNoteButton() {
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="话题标题（可选）"
+                  placeholder="话题标题"
                   maxLength={100}
                   className="w-full px-4 py-2.5 border border-gray-200 dark:border-white/10 rounded-xl 
                     focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50
@@ -92,7 +92,7 @@ export default function AddNoteButton() {
                 <textarea
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  placeholder="写下你想分享的内容..."
+                  placeholder="写下你想分享的内容...（可选，留空让别人来接话）"
                   rows={4}
                   className="w-full px-4 py-2.5 border border-gray-200 dark:border-white/10 rounded-xl resize-none
                     focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50
@@ -126,7 +126,7 @@ export default function AddNoteButton() {
               </button>
               <button
                 onClick={() => handleCreate(true)}
-                disabled={!content.trim() || isCreating || isSavingDraft}
+                disabled={!title.trim() || isCreating || isSavingDraft}
                 className="px-4 py-2 text-sm border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-300
                   rounded-xl hover:bg-gray-50 dark:hover:bg-white/10
                   disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
@@ -135,7 +135,7 @@ export default function AddNoteButton() {
               </button>
               <button
                 onClick={() => handleCreate(false)}
-                disabled={!content.trim() || isCreating || isSavingDraft}
+                disabled={!title.trim() || isCreating || isSavingDraft}
                 className="px-5 py-2 text-sm bg-gradient-to-r from-primary-500 to-primary-600 
                   text-white rounded-xl hover:from-primary-600 hover:to-primary-700 
                   disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"

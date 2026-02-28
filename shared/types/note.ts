@@ -49,7 +49,7 @@ export interface Note {
 
 export interface CreateNoteRequest {
   title: string
-  content: string
+  content?: string
   color?: NoteColor
   isDraft?: boolean
   layer?: NoteLayer
