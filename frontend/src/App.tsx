@@ -1,10 +1,12 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './stores/authStore'
+import { useLayerStore } from './stores/layerStore'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Admin from './pages/Admin'
 import Profile from './pages/Profile'
+import PinModal from './components/PinModal'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -41,8 +43,16 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  const { currentLayer } = useLayerStore()
+  const isHidden = currentLayer === 'HIDDEN'
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50">
+    <div className={`min-h-screen transition-colors duration-500 ${
+      isHidden
+        ? 'dark bg-gradient-to-br from-gray-900 via-slate-900 to-zinc-900'
+        : 'bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50'
+    }`}>
+      <PinModal />
       <Routes>
         <Route 
           path="/login" 

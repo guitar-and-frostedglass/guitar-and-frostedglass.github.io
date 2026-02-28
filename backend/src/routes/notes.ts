@@ -21,6 +21,10 @@ const createValidation = [
     .optional()
     .isIn(['yellow', 'pink', 'blue', 'green', 'purple', 'orange'])
     .withMessage('无效的颜色'),
+  body('layer')
+    .optional()
+    .isIn(['SURFACE', 'HIDDEN'])
+    .withMessage('无效的便签层级'),
 ]
 
 const updateValidation = [

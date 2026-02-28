@@ -306,6 +306,88 @@ export async function updateProfile(
   }
 }
 
+export async function hasSecondaryPin(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = req.userId
+    if (!userId) throw createError('未认证', 401)
+
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user) throw createError('用户不存在', 404)
+
+    res.json({ success: true, data: { hasPin: !!user.secondaryPinHash } })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function setSecondaryPin(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = req.userId
+    if (!userId) throw createError('未认证', 401)
+
+    const { pin, currentPin } = req.body
+
+    if (!pin || !/^\d{4,6}$/.test(pin)) {
+      throw createError('密码必须为4-6位数字', 400)
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user) throw createError('用户不存在', 404)
+
+    if (user.secondaryPinHash) {
+      if (!currentPin) throw createError('请输入当前二级密码', 400)
+      const valid = await bcrypt.compare(currentPin, user.secondaryPinHash)
+      if (!valid) throw createError('当前二级密码错误', 401)
+    }
+
+    const hash = await bcrypt.hash(pin, 12)
+    await prisma.user.update({
+      where: { id: userId },
+      data: { secondaryPinHash: hash },
+    })
+
+    res.json({ success: true, data: null })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function verifySecondaryPin(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = req.userId
+    if (!userId) throw createError('未认证', 401)
+
+    const { pin } = req.body
+    if (!pin) throw createError('请输入二级密码', 400)
+
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user) throw createError('用户不存在', 404)
+
+    if (!user.secondaryPinHash) {
+      throw createError('尚未设置二级密码', 400)
+    }
+
+    const valid = await bcrypt.compare(pin, user.secondaryPinHash)
+    if (!valid) throw createError('二级密码错误', 401)
+
+    res.json({ success: true, data: null })
+  } catch (error) {
+    next(error)
+  }
+}
+
 function generateToken(userId: string): string {
   const secret = process.env.JWT_SECRET
 

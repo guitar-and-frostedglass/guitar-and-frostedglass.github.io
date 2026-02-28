@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { useAuthStore } from './authStore'
 import { noteService } from '../services/noteService'
-import type { Note, Reply, CreateNoteRequest, UpdateNoteRequest } from '../../../shared/types'
+import type { Note, Reply, NoteLayer, CreateNoteRequest, UpdateNoteRequest } from '../../../shared/types'
 
 const READ_COUNTS_PREFIX = 'gfg_read_counts_'
 
@@ -39,7 +39,7 @@ interface NoteState {
   error: string | null
   readCounts: Record<string, number>
 
-  fetchNotes: () => Promise<void>
+  fetchNotes: (layer?: NoteLayer) => Promise<void>
   fetchNote: (id: string) => Promise<void>
   createNote: (data: CreateNoteRequest) => Promise<Note>
   updateNote: (id: string, data: UpdateNoteRequest) => Promise<void>
@@ -63,10 +63,10 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   error: null,
   readCounts: {},
 
-  fetchNotes: async () => {
+  fetchNotes: async (layer?: NoteLayer) => {
     set({ isLoading: true, error: null })
     try {
-      const notes = await noteService.getNotes()
+      const notes = await noteService.getNotes(layer)
       set({ notes, isLoading: false })
     } catch (error) {
       const message = error instanceof Error ? error.message : '获取便签失败'

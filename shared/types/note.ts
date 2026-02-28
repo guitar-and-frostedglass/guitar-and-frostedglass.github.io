@@ -1,5 +1,6 @@
 export type NoteColor = 'yellow' | 'pink' | 'blue' | 'green' | 'purple' | 'orange'
 export type NoteStatus = 'DRAFT' | 'PUBLISHED'
+export type NoteLayer = 'SURFACE' | 'HIDDEN'
 
 export interface NoteUser {
   id: string
@@ -32,6 +33,7 @@ export interface Note {
   content: string
   color: NoteColor
   status: NoteStatus
+  layer: NoteLayer
   positionX: number
   positionY: number
   userId: string
@@ -50,6 +52,7 @@ export interface CreateNoteRequest {
   content: string
   color?: NoteColor
   isDraft?: boolean
+  layer?: NoteLayer
 }
 
 export interface UpdateNoteRequest {

@@ -40,6 +40,15 @@ export interface ApiResponse<T> {
   error?: string
 }
 
+export interface SetPinRequest {
+  pin: string
+  currentPin?: string
+}
+
+export interface VerifyPinRequest {
+  pin: string
+}
+
 export interface InviteCode {
   id: string
   code: string

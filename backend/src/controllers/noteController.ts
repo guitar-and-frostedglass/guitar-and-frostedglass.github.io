@@ -13,8 +13,11 @@ export async function getNotes(
     const userId = req.userId
     if (!userId) throw createError('未认证', 401)
 
+    const layer: 'SURFACE' | 'HIDDEN' = req.query.layer === 'HIDDEN' ? 'HIDDEN' : 'SURFACE'
+
     const notes = await prisma.note.findMany({
       where: {
+        layer,
         OR: [
           { status: 'PUBLISHED' },
           { status: 'DRAFT', userId },
@@ -99,11 +102,12 @@ export async function createNote(
     const userId = req.userId
     if (!userId) throw createError('未认证', 401)
 
-    const { title = '', content = '', color = 'yellow', isDraft = false } = req.body
+    const { title = '', content = '', color = 'yellow', isDraft = false, layer = 'SURFACE' } = req.body
     const status = isDraft ? 'DRAFT' : 'PUBLISHED'
+    const noteLayer = layer === 'HIDDEN' ? 'HIDDEN' : 'SURFACE'
 
     const note = await prisma.note.create({
-      data: { title, content, color, status, userId },
+      data: { title, content, color, status, layer: noteLayer, userId },
       include: {
         user: {
           select: { id: true, displayName: true, avatar: true },

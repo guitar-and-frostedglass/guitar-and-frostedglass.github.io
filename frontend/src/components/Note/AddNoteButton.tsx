@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNoteStore } from '../../stores/noteStore'
+import { useLayerStore } from '../../stores/layerStore'
 import type { NoteColor } from '../../../../shared/types'
 import { NOTE_COLORS } from '../../../../shared/types'
 
@@ -14,6 +15,7 @@ const colorClasses: Record<NoteColor, string> = {
 
 export default function AddNoteButton() {
   const { createNote } = useNoteStore()
+  const { currentLayer } = useLayerStore()
   const [showModal, setShowModal] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [title, setTitle] = useState('')
@@ -27,7 +29,7 @@ export default function AddNoteButton() {
     if (isDraft) setIsSavingDraft(true)
     else setIsCreating(true)
     try {
-      await createNote({ title: title.trim(), content: content.trim(), color, isDraft })
+      await createNote({ title: title.trim(), content: content.trim(), color, isDraft, layer: currentLayer })
       setShowModal(false)
       setTitle('')
       setContent('')
@@ -57,9 +59,9 @@ export default function AddNoteButton() {
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
-          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl">
-            <div className="px-6 py-4 border-b flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-800">创建新话题</h3>
+          <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-2xl">
+            <div className="px-6 py-4 border-b dark:border-white/10 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">创建新话题</h3>
               <button
                 onClick={() => setShowModal(false)}
                 className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
@@ -72,32 +74,34 @@ export default function AddNoteButton() {
 
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">标题</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">标题</label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="话题标题（可选）"
                   maxLength={100}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl 
-                    focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all"
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-white/10 rounded-xl 
+                    focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50
+                    bg-white dark:bg-white/5 dark:text-gray-200 transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">内容</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">内容</label>
                 <textarea
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="写下你想分享的内容..."
                   rows={4}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl resize-none
-                    focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all"
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-white/10 rounded-xl resize-none
+                    focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50
+                    bg-white dark:bg-white/5 dark:text-gray-200 transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">颜色</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">颜色</label>
                 <div className="flex gap-2">
                   {NOTE_COLORS.map((c) => (
                     <button
@@ -113,18 +117,18 @@ export default function AddNoteButton() {
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t flex justify-end gap-3">
+            <div className="px-6 py-4 border-t dark:border-white/10 flex justify-end gap-3">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+                className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-xl transition-colors"
               >
                 取消
               </button>
               <button
                 onClick={() => handleCreate(true)}
                 disabled={!content.trim() || isCreating || isSavingDraft}
-                className="px-4 py-2 text-sm border border-gray-300 text-gray-700
-                  rounded-xl hover:bg-gray-50
+                className="px-4 py-2 text-sm border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-300
+                  rounded-xl hover:bg-gray-50 dark:hover:bg-white/10
                   disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
               >
                 {isSavingDraft ? '保存中...' : '存为草稿'}

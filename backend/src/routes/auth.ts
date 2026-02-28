@@ -59,5 +59,8 @@ router.get('/me', authenticate, authController.getCurrentUser)
 router.put('/avatar', authenticate, authController.updateAvatar)
 router.put('/password', authenticate, changePasswordValidation, authController.changePassword)
 router.put('/profile', authenticate, updateProfileValidation, authController.updateProfile)
+router.get('/has-secondary-pin', authenticate, authController.hasSecondaryPin)
+router.put('/secondary-pin', authenticate, authController.setSecondaryPin)
+router.post('/verify-secondary-pin', authenticate, authController.verifySecondaryPin)
 
 export default router

@@ -9,12 +9,12 @@ interface NoteCardProps {
 }
 
 const colorClasses: Record<NoteColor, string> = {
-  yellow: 'bg-amber-50 border-amber-200 hover:border-amber-300',
-  pink: 'bg-pink-50 border-pink-200 hover:border-pink-300',
-  blue: 'bg-blue-50 border-blue-200 hover:border-blue-300',
-  green: 'bg-green-50 border-green-200 hover:border-green-300',
-  purple: 'bg-purple-50 border-purple-200 hover:border-purple-300',
-  orange: 'bg-orange-50 border-orange-200 hover:border-orange-300',
+  yellow: 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/50 hover:border-amber-300 dark:hover:border-amber-700',
+  pink: 'bg-pink-50 dark:bg-pink-950/40 border-pink-200 dark:border-pink-800/50 hover:border-pink-300 dark:hover:border-pink-700',
+  blue: 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800/50 hover:border-blue-300 dark:hover:border-blue-700',
+  green: 'bg-green-50 dark:bg-green-950/40 border-green-200 dark:border-green-800/50 hover:border-green-300 dark:hover:border-green-700',
+  purple: 'bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800/50 hover:border-purple-300 dark:hover:border-purple-700',
+  orange: 'bg-orange-50 dark:bg-orange-950/40 border-orange-200 dark:border-orange-800/50 hover:border-orange-300 dark:hover:border-orange-700',
 }
 
 const avatarColors: Record<NoteColor, string> = {
@@ -72,10 +72,10 @@ export default function NoteCard({ note }: NoteCardProps) {
             gradient={avatarColors[note.color]}
           />
           <div className="min-w-0">
-            <p className="text-xs font-medium text-gray-600 truncate">
+            <p className="text-xs font-medium text-gray-600 dark:text-gray-300 truncate">
               {note.user?.displayName || '匿名'}
             </p>
-            <p className="text-xs text-gray-400">{timeAgo}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">{timeAgo}</p>
           </div>
         </div>
 
@@ -94,14 +94,14 @@ export default function NoteCard({ note }: NoteCardProps) {
       </div>
 
       {note.title && (
-        <h3 className="font-semibold text-gray-800 mb-1 line-clamp-1">{note.title}</h3>
+        <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-1 line-clamp-1">{note.title}</h3>
       )}
 
-      <p className="text-sm text-gray-600 line-clamp-3 whitespace-pre-wrap">
+      <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 whitespace-pre-wrap">
         {note.content || '...'}
       </p>
 
-      <div className="mt-3 flex items-center gap-1 text-xs text-gray-400">
+      <div className="mt-3 flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
             d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -117,11 +117,11 @@ export default function NoteCard({ note }: NoteCardProps) {
 
       {showDeleteConfirm && (
         <div
-          className="absolute inset-0 bg-white/95 rounded-xl flex items-center justify-center z-10"
+          className="absolute inset-0 bg-white/95 dark:bg-gray-900/95 rounded-xl flex items-center justify-center z-10"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="text-center px-3 py-3">
-            <p className="text-sm text-gray-700 mb-2.5">确定删除这个便签吗？</p>
+            <p className="text-sm text-gray-700 dark:text-gray-200 mb-2.5">确定删除这个便签吗？</p>
             <div className="flex gap-2 justify-center whitespace-nowrap">
               <button
                 onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(false) }}

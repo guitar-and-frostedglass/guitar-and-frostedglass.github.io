@@ -5,12 +5,12 @@ import type { NoteColor, Reply } from '../../../../shared/types'
 import UserAvatar from '../UserAvatar'
 
 const colorAccent: Record<NoteColor, string> = {
-  yellow: 'bg-amber-100 border-amber-200',
-  pink: 'bg-pink-100 border-pink-200',
-  blue: 'bg-blue-100 border-blue-200',
-  green: 'bg-green-100 border-green-200',
-  purple: 'bg-purple-100 border-purple-200',
-  orange: 'bg-orange-100 border-orange-200',
+  yellow: 'bg-amber-100 dark:bg-amber-900/40 border-amber-200 dark:border-amber-800/50',
+  pink: 'bg-pink-100 dark:bg-pink-900/40 border-pink-200 dark:border-pink-800/50',
+  blue: 'bg-blue-100 dark:bg-blue-900/40 border-blue-200 dark:border-blue-800/50',
+  green: 'bg-green-100 dark:bg-green-900/40 border-green-200 dark:border-green-800/50',
+  purple: 'bg-purple-100 dark:bg-purple-900/40 border-purple-200 dark:border-purple-800/50',
+  orange: 'bg-orange-100 dark:bg-orange-900/40 border-orange-200 dark:border-orange-800/50',
 }
 
 const avatarGradient: Record<NoteColor, string> = {
@@ -165,11 +165,11 @@ export default function NoteThread() {
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[85vh]">
+      <div className="w-full max-w-2xl bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col max-h-[85vh]">
         <div className={`flex items-center justify-between px-5 py-4 border-b rounded-t-2xl ${colorAccent[color]}`}>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-gray-800 truncate">
+              <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 truncate">
                 {activeNote.title || '无标题'}
               </h2>
               {isDraft && (
@@ -178,7 +178,7 @@ export default function NoteThread() {
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
               <span>{activeNote.user?.displayName}</span>
               <span>·</span>
               <span>{new Date(activeNote.createdAt).toLocaleString('zh-CN')}</span>
@@ -218,10 +218,10 @@ export default function NoteThread() {
             />
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline gap-2 mb-1">
-                <span className="text-sm font-semibold text-gray-800">
+                <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
                   {activeNote.user?.displayName}
                 </span>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-400 dark:text-gray-500">
                   {new Date(activeNote.createdAt).toLocaleString('zh-CN')}
                 </span>
                 {isNoteOwner && !isEditingNote && (
@@ -245,15 +245,15 @@ export default function NoteThread() {
                     onChange={(e) => setEditingNoteTitle(e.target.value)}
                     placeholder="标题（可选）"
                     maxLength={100}
-                    className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm
-                      focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all bg-white"
+                    className="w-full px-3 py-1.5 border border-gray-200 dark:border-white/10 rounded-lg text-sm
+                      focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50 transition-all bg-white dark:bg-white/5 dark:text-gray-200"
                   />
                   <textarea
                     value={editingNoteContent ?? ''}
                     onChange={(e) => setEditingNoteContent(e.target.value)}
                     rows={4}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg resize-none text-sm
-                      focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all bg-white"
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-white/10 rounded-lg resize-none text-sm
+                      focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50 transition-all bg-white dark:bg-white/5 dark:text-gray-200"
                   />
                   <div className="flex justify-end gap-2">
                     <button
@@ -274,7 +274,7 @@ export default function NoteThread() {
                 </div>
               ) : (
                 <div className={`rounded-xl px-4 py-3 ${colorAccent[color]}`}>
-                  <p className="text-gray-800 whitespace-pre-wrap break-words">{activeNote.content}</p>
+                  <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">{activeNote.content}</p>
                 </div>
               )}
             </div>
@@ -295,10 +295,10 @@ export default function NoteThread() {
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-semibold text-gray-800 truncate">
+                    <span className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
                       {reply.user?.displayName}
                     </span>
-                    <span className="text-xs text-gray-400 whitespace-nowrap">
+                    <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
                       {new Date(reply.createdAt).toLocaleString('zh-CN')}
                     </span>
                     {!isEditingThis && (
@@ -367,13 +367,13 @@ export default function NoteThread() {
                     )}
                   </div>
                   {isEditingThis ? (
-                    <div className={`rounded-xl px-4 py-3 ${isMe ? 'bg-primary-50 border border-primary-100' : 'bg-gray-50 border border-gray-100'} space-y-2`}>
+                    <div className={`rounded-xl px-4 py-3 ${isMe ? 'bg-primary-50 dark:bg-primary-900/30 border border-primary-100 dark:border-primary-800/40' : 'bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10'} space-y-2`}>
                       <textarea
                         value={editingReplyContent}
                         onChange={(e) => setEditingReplyContent(e.target.value)}
                         rows={3}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg resize-none text-sm
-                          focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all bg-white"
+                        className="w-full px-3 py-2 border border-gray-200 dark:border-white/10 rounded-lg resize-none text-sm
+                          focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50 transition-all bg-white dark:bg-white/5 dark:text-gray-200"
                         autoFocus
                       />
                       <div className="flex justify-end gap-2">
@@ -394,7 +394,7 @@ export default function NoteThread() {
                       </div>
                     </div>
                   ) : (
-                    <div className={`rounded-xl px-4 py-3 ${isMe ? 'bg-primary-50 border border-primary-100' : 'bg-gray-50 border border-gray-100'}`}>
+                    <div className={`rounded-xl px-4 py-3 ${isMe ? 'bg-primary-50 dark:bg-primary-900/30 border border-primary-100 dark:border-primary-800/40' : 'bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10'}`}>
                       {reply.replyTo && (
                         <div className="mb-2 pl-3 border-l-2 border-gray-300 rounded-sm">
                           <p className="text-xs font-medium text-gray-500">
@@ -410,7 +410,7 @@ export default function NoteThread() {
                           <p className="text-xs text-gray-400 italic">该回复已被删除</p>
                         </div>
                       )}
-                      <p className="text-gray-800 whitespace-pre-wrap break-words">{reply.content}</p>
+                      <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">{reply.content}</p>
                     </div>
                   )}
                 </div>
@@ -422,9 +422,9 @@ export default function NoteThread() {
         </div>
 
         {!isDraft && (
-          <div className="border-t px-5 py-3">
+          <div className="border-t dark:border-white/10 px-5 py-3">
             {replyingTo && (
-              <div className="flex items-start gap-2 mb-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-start gap-2 mb-2 px-3 py-2 bg-gray-50 dark:bg-white/5 rounded-lg border border-gray-200 dark:border-white/10">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-primary-600">
                     回复 {replyingTo.user?.displayName}
@@ -451,9 +451,9 @@ export default function NoteThread() {
                 onKeyDown={handleKeyDown}
                 placeholder={replyingTo ? `回复 ${replyingTo.user?.displayName}...` : '输入回复... (Enter 发送, Shift+Enter 换行)'}
                 rows={1}
-                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl resize-none
-                  focus:border-primary-400 focus:ring-2 focus:ring-primary-100 
-                  transition-all duration-200 bg-gray-50 text-sm"
+                className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-white/10 rounded-xl resize-none
+                  focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/50
+                  transition-all duration-200 bg-gray-50 dark:bg-white/5 dark:text-gray-200 text-sm"
               />
               <button
                 onClick={handleSendReply}

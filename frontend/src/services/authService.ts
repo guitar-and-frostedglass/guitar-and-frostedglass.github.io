@@ -69,4 +69,24 @@ export const authService = {
     }
     throw new Error(response.data.error || '更新资料失败')
   },
+
+  async hasSecondaryPin(): Promise<boolean> {
+    const response = await api.get<ApiResponse<{ hasPin: boolean }>>('/auth/has-secondary-pin')
+    if (response.data.success && response.data.data) {
+      return response.data.data.hasPin
+    }
+    return false
+  },
+
+  async setSecondaryPin(pin: string, currentPin?: string): Promise<void> {
+    const response = await api.put<ApiResponse<null>>('/auth/secondary-pin', { pin, currentPin })
+    if (!response.data.success) {
+      throw new Error(response.data.error || '设置二级密码失败')
+    }
+  },
+
+  async verifySecondaryPin(pin: string): Promise<boolean> {
+    const response = await api.post<ApiResponse<null>>('/auth/verify-secondary-pin', { pin })
+    return response.data.success === true
+  },
 }

@@ -19,15 +19,21 @@ enum NoteStatus {
   PUBLISHED
 }
 
+enum NoteLayer {
+  SURFACE
+  HIDDEN
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
   passwordHash String   @map("password_hash")
   displayName  String   @unique @map("display_name")
   avatar       String?  @map("avatar") @db.Text
-  role         Role     @default(USER)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  role              Role     @default(USER)
+  secondaryPinHash  String?  @map("secondary_pin_hash")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   notes       Note[]
   replies     Reply[]
@@ -56,6 +62,7 @@ model Note {
   content   String     @default("")
   color     String     @default("yellow")
   status    NoteStatus @default(PUBLISHED)
+  layer     NoteLayer  @default(SURFACE)
   positionX      Int      @default(50) @map("position_x")
   positionY      Int      @default(50) @map("position_y")
   lastActivityAt DateTime @default(now()) @map("last_activity_at")

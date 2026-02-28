@@ -1,17 +1,20 @@
 import { useEffect } from 'react'
 import { useNoteStore } from '../stores/noteStore'
+import { useLayerStore } from '../stores/layerStore'
 import Header from '../components/Layout/Header'
 import NoteBoard from '../components/Note/NoteBoard'
 import NoteThread from '../components/Note/NoteThread'
 import AddNoteButton from '../components/Note/AddNoteButton'
 
 export default function Dashboard() {
-  const { fetchNotes, reloadReadCounts, isLoading, error, activeNote } = useNoteStore()
+  const { fetchNotes, reloadReadCounts, isLoading, error, activeNote, clearNotes } = useNoteStore()
+  const { currentLayer } = useLayerStore()
 
   useEffect(() => {
+    clearNotes()
     reloadReadCounts()
-    fetchNotes()
-  }, [fetchNotes, reloadReadCounts])
+    fetchNotes(currentLayer)
+  }, [currentLayer, fetchNotes, reloadReadCounts, clearNotes])
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -19,10 +22,10 @@ export default function Dashboard() {
       
       <main className="flex-1 relative">
         {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-black/30 z-10">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent mx-auto mb-4"></div>
-              <p className="text-gray-600">加载中...</p>
+              <p className="text-gray-600 dark:text-gray-300">加载中...</p>
             </div>
           </div>
         )}

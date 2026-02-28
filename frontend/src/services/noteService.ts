@@ -1,9 +1,9 @@
 import api from './api'
-import type { Note, Reply, CreateNoteRequest, UpdateNoteRequest, UpdateReplyRequest, CreateReplyRequest, ApiResponse } from '../../../shared/types'
+import type { Note, Reply, NoteLayer, CreateNoteRequest, UpdateNoteRequest, UpdateReplyRequest, CreateReplyRequest, ApiResponse } from '../../../shared/types'
 
 export const noteService = {
-  async getNotes(): Promise<Note[]> {
-    const response = await api.get<ApiResponse<Note[]>>('/notes')
+  async getNotes(layer: NoteLayer = 'SURFACE'): Promise<Note[]> {
+    const response = await api.get<ApiResponse<Note[]>>('/notes', { params: { layer } })
     if (response.data.success && response.data.data) {
       return response.data.data
     }
