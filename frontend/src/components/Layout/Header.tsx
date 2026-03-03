@@ -1,33 +1,43 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../stores/authStore'
 import { useNoteStore } from '../../stores/noteStore'
-import { useLayerStore } from '../../stores/layerStore'
+import { useLayerStore, isNightTime } from '../../stores/layerStore'
 import UserAvatar from '../UserAvatar'
 
 export default function Header() {
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
   const { clearNotes } = useNoteStore()
-  const { currentLayer, openPinModal, lock } = useLayerStore()
+  const { currentLayer, openPinModal, lock, enforceCurfew } = useLayerStore()
   const [showDropdown, setShowDropdown] = useState(false)
+  const [nightMode, setNightMode] = useState(isNightTime)
   const isAdmin = user?.role === 'ADMIN'
   const isHidden = currentLayer === 'HIDDEN'
 
-  const handleLogout = () => {
+  useEffect(() => {
+    const check = () => {
+      setNightMode(isNightTime())
+      enforceCurfew()
+    }
+    const id = setInterval(check, 60_000)
+    return () => clearInterval(id)
+  }, [enforceCurfew])
+
+  const handleLogout = useCallback(() => {
     clearNotes()
     lock()
     logout()
     navigate('/login')
-  }
+  }, [clearNotes, lock, logout, navigate])
 
-  const handleLockToggle = () => {
+  const handleLockToggle = useCallback(() => {
     if (isHidden) {
       lock()
     } else {
       openPinModal()
     }
-  }
+  }, [isHidden, lock, openPinModal])
 
   return (
     <header className="glass border-b border-white/20 sticky top-0 z-30">
@@ -42,27 +52,29 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleLockToggle}
-            className={`p-2 rounded-xl transition-colors ${
-              isHidden
-                ? 'bg-white/10 text-white hover:bg-white/20'
-                : 'hover:bg-white/50 text-gray-500'
-            }`}
-            title={isHidden ? '返回表便签' : '进入里便签'}
-          >
-            {isHidden ? (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-            )}
-          </button>
+          {(nightMode || isHidden) && (
+            <button
+              onClick={handleLockToggle}
+              className={`p-2 rounded-xl transition-colors ${
+                isHidden
+                  ? 'bg-white/10 text-white hover:bg-white/20'
+                  : 'hover:bg-white/50 text-gray-500'
+              }`}
+              title={isHidden ? '返回表便签' : '进入里便签'}
+            >
+              {isHidden ? (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              )}
+            </button>
+          )}
 
           <div className="relative">
           <button
