@@ -3,6 +3,7 @@ import { validationResult } from 'express-validator'
 import { prisma } from '../utils/prisma.js'
 import { createError } from '../middleware/errorHandler.js'
 import { AuthRequest } from '../middleware/auth.js'
+import { getIO } from '../socket.js'
 
 export async function getNotes(
   req: AuthRequest,
@@ -118,6 +119,10 @@ export async function createNote(
       },
     })
 
+    if (status === 'PUBLISHED') {
+      getIO().emit('note:created', note)
+    }
+
     res.status(201).json({ success: true, data: note })
   } catch (error) {
     next(error)
@@ -186,6 +191,8 @@ export async function updateNote(
       },
     })
 
+    getIO().emit('note:updated', note)
+
     res.json({ success: true, data: note })
   } catch (error) {
     next(error)
@@ -251,6 +258,8 @@ export async function deleteNote(
       prisma.note.delete({ where: { id: noteId } }),
     ])
 
+    getIO().emit('note:deleted', { id: noteId })
+
     res.json({ success: true, data: null })
   } catch (error) {
     next(error)
@@ -307,6 +316,8 @@ export async function createReply(
       }),
     ])
 
+    getIO().emit('reply:created', { noteId, reply })
+
     res.status(201).json({ success: true, data: reply })
   } catch (error) {
     next(error)
@@ -343,6 +354,8 @@ export async function publishNote(
         },
       },
     })
+
+    getIO().emit('note:created', note)
 
     res.json({ success: true, data: note })
   } catch (error) {
@@ -399,6 +412,8 @@ export async function updateReply(
       }),
     ])
 
+    getIO().emit('reply:updated', { noteId, reply })
+
     res.json({ success: true, data: reply })
   } catch (error) {
     next(error)
@@ -453,6 +468,8 @@ export async function deleteReply(
       }),
       prisma.reply.delete({ where: { id: replyId } }),
     ])
+
+    getIO().emit('reply:deleted', { noteId, replyId })
 
     res.json({ success: true, data: null })
   } catch (error) {

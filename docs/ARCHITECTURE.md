@@ -126,6 +126,41 @@ File: `/etc/nginx/sites-available/gfg-api` (symlinked to `sites-enabled`)
 |---------------|-----------|---------|
 | `/api/*` | `http://localhost:4000/api/*` | None (pass-through) |
 | `/dev-api/*` | `http://localhost:4001/api/*` | `/dev-api/x` → `/api/x` |
+| `/socket.io/*` | `http://localhost:4000/socket.io/*` | None (WebSocket upgrade) |
+| `/dev-socket.io/*` | `http://localhost:4001/socket.io/*` | Rewrite path |
+
+### WebSocket (Socket.IO) support
+
+Nginx must pass WebSocket upgrade headers for Socket.IO to work. Add the following to each `location` block that proxies Socket.IO:
+
+```nginx
+# Production Socket.IO
+location /socket.io/ {
+    proxy_pass http://localhost:4000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+# Dev Socket.IO
+location /dev-socket.io/ {
+    rewrite ^/dev-socket.io/(.*) /socket.io/$1 break;
+    proxy_pass http://localhost:4001;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+Without these headers, WebSocket connections will fail and Socket.IO will fall back to HTTP long-polling (still works but slower).
 
 ### SSL
 
@@ -146,6 +181,7 @@ Certbot auto-modified the nginx config to add the `listen 443 ssl` block and red
 - Auth: JWT (jsonwebtoken) + bcryptjs
 - Validation: express-validator
 - Email: nodemailer (SMTP, optional)
+- Real-time: Socket.IO 4.x (WebSocket with polling fallback)
 - Security: helmet, cors
 
 ### API routes
@@ -174,6 +210,21 @@ Certbot auto-modified the nginx config to add the `listen 443 ssl` block and red
 | POST | `/api/admin/invite-codes` | Yes | Yes | Generate an invite code (15 min expiry); optionally sends invite email if `email` is provided in body |
 | GET | `/api/admin/invite-codes` | Yes | Yes | List all invite codes |
 | GET | `/api/admin/deleted-replies` | Yes | Yes | List all deleted reply records |
+
+### Real-time events (Socket.IO)
+
+The backend emits events to all connected clients when notes/replies are mutated. The frontend listens and updates the UI without polling. Connections are authenticated via JWT (same token as REST API, passed in `socket.handshake.auth.token`).
+
+| Event | Payload | Emitted when |
+|-------|---------|-------------|
+| `note:created` | `Note` (with user, _count) | A note is published (new or from draft) |
+| `note:updated` | `Note` (with user, _count) | A note's title/content/color is edited |
+| `note:deleted` | `{ id: string }` | A note is deleted |
+| `reply:created` | `{ noteId: string, reply: Reply }` | A reply is added to a note |
+| `reply:updated` | `{ noteId: string, reply: Reply }` | A reply's content is edited |
+| `reply:deleted` | `{ noteId: string, replyId: string }` | A reply is deleted |
+
+The frontend ignores events originating from the current user (to avoid duplicating local state updates).
 
 ### Database schema
 
@@ -254,6 +305,7 @@ Managed via Prisma migrations in `backend/prisma/migrations/`. Migration files a
 - Zustand (state management)
 - React Router DOM 6
 - Axios (HTTP client)
+- Socket.IO Client (real-time updates)
 - react-easy-crop (avatar image cropping)
 
 ### Pages

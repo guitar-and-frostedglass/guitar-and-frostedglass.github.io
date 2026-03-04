@@ -7,8 +7,13 @@ import NoteThread from '../components/Note/NoteThread'
 import AddNoteButton from '../components/Note/AddNoteButton'
 
 export default function Dashboard() {
-  const { fetchNotes, reloadReadCounts, isLoading, error, activeNote, clearNotes } = useNoteStore()
+  const { fetchNotes, reloadReadCounts, isLoading, error, activeNote, clearNotes, initSocket, destroySocket } = useNoteStore()
   const { currentLayer } = useLayerStore()
+
+  useEffect(() => {
+    initSocket()
+    return () => { destroySocket() }
+  }, [initSocket, destroySocket])
 
   useEffect(() => {
     clearNotes()

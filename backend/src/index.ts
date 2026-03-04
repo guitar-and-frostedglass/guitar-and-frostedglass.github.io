@@ -1,4 +1,5 @@
 import express from 'express'
+import { createServer } from 'http'
 import cors from 'cors'
 import helmet from 'helmet'
 import morgan from 'morgan'
@@ -9,10 +10,12 @@ import noteRoutes from './routes/notes.js'
 import adminRoutes from './routes/admin.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { seedAdmin } from './controllers/authController.js'
+import { initSocket } from './socket.js'
 
 dotenv.config()
 
 const app = express()
+const httpServer = createServer(app)
 const PORT = process.env.PORT || 4000
 
 app.use(helmet())
@@ -27,6 +30,8 @@ app.use(cors({
 }))
 app.use(morgan('dev'))
 app.use(express.json())
+
+initSocket(httpServer, corsOrigins)
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
@@ -44,7 +49,7 @@ app.use(errorHandler)
 
 async function start() {
   await seedAdmin()
-  app.listen(PORT, () => {
+  httpServer.listen(PORT, () => {
     console.log(`🎸 Guitar & Frosted Glass API 运行在 http://localhost:${PORT}`)
   })
 }

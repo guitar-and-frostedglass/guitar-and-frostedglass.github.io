@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { useAuthStore } from './authStore'
 import { noteService } from '../services/noteService'
+import { connectSocket, disconnectSocket, getSocket } from '../services/socket'
 import type { Note, Reply, NoteLayer, CreateNoteRequest, UpdateNoteRequest } from '../../../shared/types'
 
 const READ_COUNTS_PREFIX = 'gfg_read_counts_'
@@ -54,6 +55,8 @@ interface NoteState {
   reloadReadCounts: () => void
   clearError: () => void
   clearNotes: () => void
+  initSocket: () => void
+  destroySocket: () => void
 }
 
 export const useNoteStore = create<NoteState>((set, get) => ({
@@ -272,5 +275,120 @@ export const useNoteStore = create<NoteState>((set, get) => ({
 
   clearNotes: () => {
     set({ notes: [], activeNote: null, error: null })
+  },
+
+  initSocket: () => {
+    try {
+      const socket = connectSocket()
+      const currentUserId = getUserId()
+
+      socket.on('note:created', (note: Note) => {
+        if (note.userId === currentUserId) return
+        set((state) => {
+          const exists = state.notes.some((n) => n.id === note.id)
+          if (exists) return state
+          return {
+            notes: [note, ...state.notes].sort(
+              (a, b) => new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime()
+            ),
+          }
+        })
+      })
+
+      socket.on('note:updated', (note: Note) => {
+        if (note.userId === currentUserId) return
+        set((state) => ({
+          notes: state.notes.map((n) => (n.id === note.id ? { ...n, ...note } : n)),
+          activeNote:
+            state.activeNote?.id === note.id
+              ? { ...state.activeNote, ...note, replies: state.activeNote.replies }
+              : state.activeNote,
+        }))
+      })
+
+      socket.on('note:deleted', ({ id }: { id: string }) => {
+        set((state) => ({
+          notes: state.notes.filter((n) => n.id !== id),
+          activeNote: state.activeNote?.id === id ? null : state.activeNote,
+        }))
+      })
+
+      socket.on('reply:created', ({ noteId, reply }: { noteId: string; reply: Reply }) => {
+        if (reply.userId === currentUserId) return
+        set((state) => {
+          const newNotes = state.notes.map((n) =>
+            n.id === noteId
+              ? {
+                  ...n,
+                  _count: { replies: (n._count?.replies ?? 0) + 1 },
+                  lastActivityAt: new Date().toISOString(),
+                }
+              : n
+          ).sort((a, b) => new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime())
+
+          const newActiveNote =
+            state.activeNote?.id === noteId && state.activeNote.replies
+              ? {
+                  ...state.activeNote,
+                  replies: state.activeNote.replies.some((r) => r.id === reply.id)
+                    ? state.activeNote.replies
+                    : [...state.activeNote.replies, reply],
+                }
+              : state.activeNote
+
+          return { notes: newNotes, activeNote: newActiveNote }
+        })
+      })
+
+      socket.on('reply:updated', ({ noteId, reply }: { noteId: string; reply: Reply }) => {
+        if (reply.userId === currentUserId) return
+        set((state) => {
+          if (state.activeNote?.id !== noteId || !state.activeNote.replies) return state
+          return {
+            activeNote: {
+              ...state.activeNote,
+              replies: state.activeNote.replies.map((r) =>
+                r.id === reply.id ? { ...r, ...reply } : r
+              ),
+            },
+          }
+        })
+      })
+
+      socket.on('reply:deleted', ({ noteId, replyId }: { noteId: string; replyId: string }) => {
+        set((state) => {
+          const newNotes = state.notes.map((n) =>
+            n.id === noteId
+              ? { ...n, _count: { replies: Math.max((n._count?.replies ?? 1) - 1, 0) } }
+              : n
+          )
+
+          const newActiveNote =
+            state.activeNote?.id === noteId && state.activeNote.replies
+              ? {
+                  ...state.activeNote,
+                  replies: state.activeNote.replies.filter((r) => r.id !== replyId),
+                }
+              : state.activeNote
+
+          return { notes: newNotes, activeNote: newActiveNote }
+        })
+      })
+    } catch {
+      // token not available yet, socket will be retried on next call
+    }
+  },
+
+  destroySocket: () => {
+    const socket = getSocket()
+    if (socket) {
+      socket.off('note:created')
+      socket.off('note:updated')
+      socket.off('note:deleted')
+      socket.off('reply:created')
+      socket.off('reply:updated')
+      socket.off('reply:deleted')
+    }
+    disconnectSocket()
   },
 }))
