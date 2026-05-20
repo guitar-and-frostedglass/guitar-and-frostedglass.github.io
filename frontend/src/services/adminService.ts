@@ -1,5 +1,5 @@
 import api from './api'
-import type { AdminUser, InviteCode, DeletedReply, DeletedNote, ApiResponse } from '../../../shared/types'
+import type { AdminUser, InviteCode, DeletedReply, DeletedNote, Note, NoteLayer, ApiResponse } from '../../../shared/types'
 
 export const adminService = {
   async getUsers(): Promise<AdminUser[]> {
@@ -72,5 +72,13 @@ export const adminService = {
     if (!response.data.success) {
       throw new Error(response.data.error || '彻底删除失败')
     }
+  },
+
+  async updateNoteLayer(id: string, layer: NoteLayer): Promise<Note> {
+    const response = await api.put<ApiResponse<Note>>(`/admin/notes/${id}/layer`, { layer })
+    if (response.data.success && response.data.data) {
+      return response.data.data
+    }
+    throw new Error(response.data.error || '移动便签失败')
   },
 }

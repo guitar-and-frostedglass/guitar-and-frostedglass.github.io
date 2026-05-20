@@ -98,6 +98,7 @@ export interface DeletedNote {
   title: string
   content: string
   color: string
+  layer: NoteLayer
   noteUserId: string
   noteUserName: string
   replies: DeletedNoteReplySnapshot[]

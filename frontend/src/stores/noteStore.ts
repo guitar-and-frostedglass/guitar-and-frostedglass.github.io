@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { useAuthStore } from './authStore'
 import { noteService } from '../services/noteService'
+import { adminService } from '../services/adminService'
 import { connectSocket, disconnectSocket, getSocket } from '../services/socket'
 import type { Note, Reply, NoteLayer, CreateNoteRequest, UpdateNoteRequest } from '../../../shared/types'
 
@@ -46,6 +47,7 @@ interface NoteState {
   updateNote: (id: string, data: UpdateNoteRequest) => Promise<void>
   publishNote: (id: string) => Promise<void>
   deleteNote: (id: string) => Promise<void>
+  moveNoteLayer: (id: string, layer: NoteLayer) => Promise<void>
   createReply: (noteId: string, content: string, replyToId?: string) => Promise<Reply>
   updateReply: (noteId: string, replyId: string, content: string) => Promise<void>
   deleteReply: (noteId: string, replyId: string) => Promise<void>
@@ -155,6 +157,20 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       }))
     } catch (error) {
       const message = error instanceof Error ? error.message : '删除便签失败'
+      set({ error: message })
+      throw error
+    }
+  },
+
+  moveNoteLayer: async (id: string, layer: NoteLayer) => {
+    try {
+      await adminService.updateNoteLayer(id, layer)
+      set((state) => ({
+        notes: state.notes.filter((note) => note.id !== id),
+        activeNote: state.activeNote?.id === id ? null : state.activeNote,
+      }))
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '移动便签失败'
       set({ error: message })
       throw error
     }

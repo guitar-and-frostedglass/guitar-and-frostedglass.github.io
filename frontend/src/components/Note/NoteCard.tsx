@@ -27,14 +27,17 @@ const avatarColors: Record<NoteColor, string> = {
 }
 
 export default function NoteCard({ note }: NoteCardProps) {
-  const { setActiveNote, fetchNote, deleteNote, markNoteRead, isNoteUnread } = useNoteStore()
+  const { setActiveNote, fetchNote, deleteNote, moveNoteLayer, markNoteRead, isNoteUnread } = useNoteStore()
   const { user } = useAuthStore()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isMovingLayer, setIsMovingLayer] = useState(false)
   const isOwner = user?.id === note.userId
   const isAdmin = user?.role === 'ADMIN'
   const canDelete = isOwner || isAdmin
   const isDraft = note.status === 'DRAFT'
   const unread = isNoteUnread(note.id)
+  const targetLayer = note.layer === 'HIDDEN' ? 'SURFACE' : 'HIDDEN'
+  const moveLabel = targetLayer === 'HIDDEN' ? '移到隐藏层' : '移到表层'
 
   const handleClick = async () => {
     markNoteRead(note.id)
@@ -46,6 +49,17 @@ export default function NoteCard({ note }: NoteCardProps) {
     e.stopPropagation()
     await deleteNote(note.id)
     setShowDeleteConfirm(false)
+  }
+
+  const handleMoveLayer = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (isMovingLayer) return
+    setIsMovingLayer(true)
+    try {
+      await moveNoteLayer(note.id, targetLayer)
+    } catch {
+      setIsMovingLayer(false)
+    }
   }
 
   const replyCount = note._count?.replies ?? 0
@@ -79,18 +93,40 @@ export default function NoteCard({ note }: NoteCardProps) {
           </div>
         </div>
 
-        {canDelete && (
-          <button
-            onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true) }}
-            className="p-1 hover:bg-black/5 rounded transition-colors flex-shrink-0"
-            title={isOwner ? '删除' : '管理员删除'}
-          >
-            <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </button>
-        )}
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          {isAdmin && !isDraft && (
+            <button
+              onClick={handleMoveLayer}
+              disabled={isMovingLayer}
+              className="p-1 hover:bg-black/5 rounded transition-colors disabled:opacity-50"
+              title={moveLabel}
+            >
+              {targetLayer === 'HIDDEN' ? (
+                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                </svg>
+              )}
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true) }}
+              className="p-1 hover:bg-black/5 rounded transition-colors"
+              title={isOwner ? '删除' : '管理员删除'}
+            >
+              <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {note.title && (

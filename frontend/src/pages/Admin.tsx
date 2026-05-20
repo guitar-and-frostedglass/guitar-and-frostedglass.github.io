@@ -442,6 +442,10 @@ export default function Admin() {
                             <span className="text-sm font-medium text-gray-800">
                               {dn.title || '无标题'}
                             </span>
+                            <span className={`inline-flex px-1.5 py-0.5 text-xs font-medium rounded
+                              ${dn.layer === 'HIDDEN' ? 'bg-indigo-100 text-indigo-700' : 'bg-sky-100 text-sky-700'}`}>
+                              {dn.layer === 'HIDDEN' ? '隐藏层' : '表层'}
+                            </span>
                             <span className="text-xs text-gray-400">
                               by {dn.noteUserName}
                             </span>

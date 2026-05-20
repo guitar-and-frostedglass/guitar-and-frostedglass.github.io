@@ -33,6 +33,15 @@ router.post(
 router.get('/invite-codes', adminController.getInviteCodes)
 router.get('/deleted-replies', adminController.getDeletedReplies)
 
+router.put(
+  '/notes/:id/layer',
+  [
+    param('id').isUUID().withMessage('无效的便签ID'),
+    body('layer').isIn(['SURFACE', 'HIDDEN']).withMessage('无效的便签层级'),
+  ],
+  adminController.updateNoteLayer
+)
+
 router.get('/deleted-notes', adminController.getDeletedNotes)
 router.post(
   '/deleted-notes/:id/restore',

@@ -247,6 +247,7 @@ export async function deleteNote(
           title: existingNote.title,
           content: existingNote.content,
           color: existingNote.color,
+          layer: existingNote.layer,
           noteUserId: existingNote.userId,
           noteUserName: existingNote.user.displayName,
           replies: repliesSnapshot,

@@ -4,6 +4,7 @@ import { prisma } from '../utils/prisma.js'
 import { createError } from '../middleware/errorHandler.js'
 import { AuthRequest } from '../middleware/auth.js'
 import { sendInviteEmail } from '../utils/mailer.js'
+import { getIO } from '../socket.js'
 
 export async function getAllUsers(
   req: AuthRequest,
@@ -231,6 +232,7 @@ export async function restoreNote(
           title: deletedNote.title,
           content: deletedNote.content,
           color: deletedNote.color,
+          layer: deletedNote.layer,
           userId: deletedNote.noteUserId,
           createdAt: deletedNote.noteCreatedAt,
           lastActivityAt:
@@ -258,6 +260,45 @@ export async function restoreNote(
     })
 
     res.json({ success: true, data: null })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function updateNoteLayer(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const { id } = req.params
+    const { layer } = req.body as { layer?: string }
+
+    if (layer !== 'SURFACE' && layer !== 'HIDDEN') {
+      throw createError('无效的便签层级', 400)
+    }
+
+    const existing = await prisma.note.findUnique({ where: { id } })
+    if (!existing) throw createError('便签不存在', 404)
+
+    if (existing.layer === layer) {
+      throw createError('便签已在该层级', 400)
+    }
+
+    const note = await prisma.note.update({
+      where: { id },
+      data: { layer },
+      include: {
+        user: { select: { id: true, displayName: true, avatar: true } },
+        _count: { select: { replies: true } },
+      },
+    })
+
+    // Notify clients viewing the source layer to remove the card. Destination
+    // viewers will pick it up on their next fetch / layer switch.
+    getIO().emit('note:deleted', { id })
+
+    res.json({ success: true, data: note })
   } catch (error) {
     next(error)
   }
