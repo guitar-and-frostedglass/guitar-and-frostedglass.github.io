@@ -9,7 +9,7 @@ export default function Header() {
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
   const { clearNotes } = useNoteStore()
-  const { currentLayer, openPinModal, lock } = useLayerStore()
+  const { currentLayer, openPinModal, unlock, lock } = useLayerStore()
   const [showDropdown, setShowDropdown] = useState(false)
   const isAdmin = user?.role === 'ADMIN'
   const isHidden = currentLayer === 'HIDDEN'
@@ -24,6 +24,8 @@ export default function Header() {
   const handleLockToggle = () => {
     if (isHidden) {
       lock()
+    } else if (isAdmin) {
+      unlock()
     } else {
       openPinModal()
     }
