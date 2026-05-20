@@ -71,4 +71,20 @@ export const noteService = {
       throw new Error(response.data.error || '删除回复失败')
     }
   },
+
+  async getReadStates(): Promise<Record<string, number>> {
+    const response = await api.get<ApiResponse<Record<string, number>>>('/notes/read-states')
+    if (response.data.success && response.data.data) {
+      return response.data.data
+    }
+    throw new Error(response.data.error || '获取阅读状态失败')
+  },
+
+  async markNoteRead(noteId: string): Promise<{ noteId: string; readCount: number }> {
+    const response = await api.post<ApiResponse<{ noteId: string; readCount: number }>>(`/notes/${noteId}/read`)
+    if (response.data.success && response.data.data) {
+      return response.data.data
+    }
+    throw new Error(response.data.error || '标记已读失败')
+  },
 }

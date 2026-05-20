@@ -5,33 +5,8 @@ import { adminService } from '../services/adminService'
 import { connectSocket, disconnectSocket, getSocket } from '../services/socket'
 import type { Note, Reply, NoteLayer, CreateNoteRequest, UpdateNoteRequest } from '../../../shared/types'
 
-const READ_COUNTS_PREFIX = 'gfg_read_counts_'
-
 function getUserId(): string | null {
   return useAuthStore.getState().user?.id ?? null
-}
-
-function getStorageKey(): string {
-  const userId = getUserId()
-  if (!userId) return ''
-  return `${READ_COUNTS_PREFIX}${userId}`
-}
-
-function loadReadCounts(): Record<string, number> {
-  const key = getStorageKey()
-  if (!key) return {}
-  try {
-    const raw = localStorage.getItem(key)
-    return raw ? JSON.parse(raw) : {}
-  } catch {
-    return {}
-  }
-}
-
-function saveReadCounts(counts: Record<string, number>) {
-  const key = getStorageKey()
-  if (!key) return
-  localStorage.setItem(key, JSON.stringify(counts))
 }
 
 interface NoteState {
@@ -54,7 +29,7 @@ interface NoteState {
   setActiveNote: (note: Note | null) => void
   markNoteRead: (noteId: string) => void
   isNoteUnread: (noteId: string) => boolean
-  reloadReadCounts: () => void
+  fetchReadStates: () => Promise<void>
   clearError: () => void
   clearNotes: () => void
   initSocket: () => void
@@ -93,13 +68,12 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     set({ isLoading: true, error: null })
     try {
       const note = await noteService.createNote(data)
-      const updated = { ...get().readCounts, [note.id]: 0 }
-      saveReadCounts(updated)
       set((state) => ({
         notes: [note, ...state.notes],
-        readCounts: updated,
+        readCounts: { ...state.readCounts, [note.id]: 0 },
         isLoading: false,
       }))
+      noteService.markNoteRead(note.id).catch((err) => console.warn('[read] markRead failed', err))
       return note
     } catch (error) {
       const message = error instanceof Error ? error.message : '创建便签失败'
@@ -147,14 +121,15 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   deleteNote: async (id: string) => {
     try {
       await noteService.deleteNote(id)
-      const updated = { ...get().readCounts }
-      delete updated[id]
-      saveReadCounts(updated)
-      set((state) => ({
-        notes: state.notes.filter((note) => note.id !== id),
-        activeNote: state.activeNote?.id === id ? null : state.activeNote,
-        readCounts: updated,
-      }))
+      set((state) => {
+        const updated = { ...state.readCounts }
+        delete updated[id]
+        return {
+          notes: state.notes.filter((note) => note.id !== id),
+          activeNote: state.activeNote?.id === id ? null : state.activeNote,
+          readCounts: updated,
+        }
+      })
     } catch (error) {
       const message = error instanceof Error ? error.message : '删除便签失败'
       set({ error: message })
@@ -189,16 +164,15 @@ export const useNoteStore = create<NoteState>((set, get) => ({
         })
       }
       const newCount = (get().notes.find((n) => n.id === noteId)?._count?.replies ?? 0) + 1
-      const updatedCounts = { ...get().readCounts, [noteId]: newCount }
-      saveReadCounts(updatedCounts)
       set((state) => ({
         notes: state.notes.map((note) =>
           note.id === noteId
             ? { ...note, _count: { replies: newCount }, lastActivityAt: new Date().toISOString() }
             : note
         ).sort((a, b) => new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime()),
-        readCounts: updatedCounts,
+        readCounts: { ...state.readCounts, [noteId]: newCount },
       }))
+      noteService.markNoteRead(noteId).catch((err) => console.warn('[read] markRead failed', err))
       return reply
     } catch (error) {
       const message = error instanceof Error ? error.message : '回复失败'
@@ -241,16 +215,15 @@ export const useNoteStore = create<NoteState>((set, get) => ({
         })
       }
       const newCount = Math.max((get().notes.find((n) => n.id === noteId)?._count?.replies ?? 1) - 1, 0)
-      const updatedCounts = { ...get().readCounts, [noteId]: newCount }
-      saveReadCounts(updatedCounts)
       set((state) => ({
         notes: state.notes.map((note) =>
           note.id === noteId
             ? { ...note, _count: { replies: newCount } }
             : note
         ),
-        readCounts: updatedCounts,
+        readCounts: { ...state.readCounts, [noteId]: newCount },
       }))
+      noteService.markNoteRead(noteId).catch((err) => console.warn('[read] markRead failed', err))
     } catch (error) {
       const message = error instanceof Error ? error.message : '删除回复失败'
       set({ error: message })
@@ -261,9 +234,8 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   markNoteRead: (noteId: string) => {
     const note = get().notes.find((n) => n.id === noteId)
     const count = note?._count?.replies ?? 0
-    const updated = { ...get().readCounts, [noteId]: count }
-    saveReadCounts(updated)
-    set({ readCounts: updated })
+    set((state) => ({ readCounts: { ...state.readCounts, [noteId]: count } }))
+    noteService.markNoteRead(noteId).catch((err) => console.warn('[read] markRead failed', err))
   },
 
   isNoteUnread: (noteId: string) => {
@@ -277,8 +249,14 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     return current > seen
   },
 
-  reloadReadCounts: () => {
-    set({ readCounts: loadReadCounts() })
+  fetchReadStates: async () => {
+    if (!getUserId()) return
+    try {
+      const map = await noteService.getReadStates()
+      set({ readCounts: map })
+    } catch (err) {
+      console.warn('[read] fetchReadStates failed', err)
+    }
   },
 
   setActiveNote: (note: Note | null) => {

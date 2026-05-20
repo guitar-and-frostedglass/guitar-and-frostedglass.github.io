@@ -5,6 +5,60 @@ import { createError } from '../middleware/errorHandler.js'
 import { AuthRequest } from '../middleware/auth.js'
 import { getIO } from '../socket.js'
 
+export async function getReadStates(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = req.userId
+    if (!userId) throw createError('未认证', 401)
+
+    const states = await prisma.noteReadState.findMany({
+      where: { userId },
+      select: { noteId: true, readCount: true },
+    })
+
+    const map: Record<string, number> = {}
+    for (const s of states) map[s.noteId] = s.readCount
+
+    res.json({ success: true, data: map })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function markNoteRead(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = req.userId
+    if (!userId) throw createError('未认证', 401)
+
+    const noteId = req.params.id
+
+    const note = await prisma.note.findUnique({
+      where: { id: noteId },
+      select: { id: true, _count: { select: { replies: true } } },
+    })
+    if (!note) throw createError('便签不存在', 404)
+
+    const readCount = note._count.replies
+
+    await prisma.noteReadState.upsert({
+      where: { userId_noteId: { userId, noteId } },
+      update: { readCount },
+      create: { userId, noteId, readCount },
+    })
+
+    res.json({ success: true, data: { noteId, readCount } })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export async function getNotes(
   req: AuthRequest,
   res: Response,

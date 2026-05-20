@@ -38,6 +38,7 @@ model User {
   notes       Note[]
   replies     Reply[]
   inviteCodes InviteCode[]
+  readStates  NoteReadState[]
 
   @@map("users")
 }
@@ -73,6 +74,7 @@ model Note {
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   replies Reply[]
   editHistory NoteEditHistory[]
+  readStates  NoteReadState[]
 
   @@map("notes")
 }
@@ -137,6 +139,19 @@ model DeletedReply {
   deletedAt       DateTime @default(now()) @map("deleted_at")
 
   @@map("deleted_replies")
+}
+
+model NoteReadState {
+  userId    String   @map("user_id")
+  noteId    String   @map("note_id")
+  readCount Int      @default(0) @map("read_count")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@id([userId, noteId])
+  @@map("note_read_states")
 }
 
 model DeletedNote {

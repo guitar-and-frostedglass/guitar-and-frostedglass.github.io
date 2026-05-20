@@ -81,6 +81,13 @@ const publishValidation = [
   param('id').isUUID().withMessage('无效的便签ID'),
 ]
 
+router.get('/read-states', noteController.getReadStates)
+router.post(
+  '/:id/read',
+  [param('id').isUUID().withMessage('无效的便签ID')],
+  noteController.markNoteRead
+)
+
 router.get('/', noteController.getNotes)
 router.get('/:id', [param('id').isUUID().withMessage('无效的便签ID')], noteController.getNote)
 router.post('/', createValidation, noteController.createNote)

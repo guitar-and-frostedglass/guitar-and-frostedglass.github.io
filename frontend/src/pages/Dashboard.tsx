@@ -7,7 +7,7 @@ import NoteThread from '../components/Note/NoteThread'
 import AddNoteButton from '../components/Note/AddNoteButton'
 
 export default function Dashboard() {
-  const { fetchNotes, reloadReadCounts, isLoading, error, activeNote, clearNotes, initSocket, destroySocket } = useNoteStore()
+  const { fetchNotes, fetchReadStates, isLoading, error, activeNote, clearNotes, initSocket, destroySocket } = useNoteStore()
   const { currentLayer } = useLayerStore()
 
   useEffect(() => {
@@ -17,9 +17,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     clearNotes()
-    reloadReadCounts()
+    fetchReadStates()
     fetchNotes(currentLayer)
-  }, [currentLayer, fetchNotes, reloadReadCounts, clearNotes])
+  }, [currentLayer, fetchNotes, fetchReadStates, clearNotes])
 
   return (
     <div className="min-h-screen flex flex-col">
