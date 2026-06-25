@@ -7,7 +7,7 @@
 | Prod API | `https://gfg-api.duckdns.org/api/*` |
 | Dev API | `https://gfg-api.duckdns.org/dev-api/*` |
 | Frontend | `https://guitar-and-frostedglass.github.io/` |
-| Server | Oracle Cloud VM `129.153.195.31` (SSH via bastion) |
+| Server | Oracle Cloud VM `129.153.195.31` (direct SSH: `ssh g-f-backend-ubuntu`) |
 | DNS | `gfg-api.duckdns.org` on DuckDNS |
 | SSL cert | Let's Encrypt, auto-renews via certbot timer |
 

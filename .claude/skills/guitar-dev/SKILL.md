@@ -102,13 +102,15 @@ res.json({ success: true,  data: result });
 res.json({ success: false, error: "message" });
 ```
 
-### 7. SSH to server requires a fresh OCI bastion session
+### 7. SSH is direct to the public IP (no bastion)
 
-The OCI bastion session OCID in `~/.ssh/config` under `Host oci-bastion`
-expires. If `ssh g-f-backend-ubuntu` hangs, the session is stale — the user
-must create a new session in OCI console/CLI and update the `User` field.
-**Do not "fix" this by editing the config to a guessed value.** Tell the user
-to refresh the bastion session.
+`ssh g-f-backend-ubuntu` connects straight to the public IP
+(`129.153.195.31`, user `ubuntu`, key `~/.ssh/id_ed25519_guitar`). There is no
+OCI bastion / `ProxyJump` anymore. If the connection hangs, the server/IP is
+the suspect — check the IP in `docs/ARCHITECTURE.md` and that port 22 is open.
+If it's refused with `Permission denied (publickey)`, the key isn't in the
+server's `authorized_keys` — an existing admin must add it. **Do not invent an
+IP or edit the config to a guessed value.**
 
 ### 8. Socket.IO requires WebSocket upgrade headers in nginx
 

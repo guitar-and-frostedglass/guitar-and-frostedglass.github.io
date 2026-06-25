@@ -19,7 +19,7 @@ in the `guitar-dev` skill — most importantly: `guitar` not `git`,
 
 - You're in the repo root: `/Users/yuqix/Desktop/personal/guitar/guitar-and-frostedglass-dev`.
 - The `guitar` shell function exists (see `docs/ONBOARDING.md` §4).
-- `~/.ssh/config` defines `g-f-backend-ubuntu` and `oci-bastion`.
+- `~/.ssh/config` defines `g-f-backend-ubuntu` (direct SSH to the public IP `129.153.195.31`; no bastion).
 - The user wants to deploy the **current `main` branch** at its current HEAD.
   Other branches → stop and ask.
 
@@ -85,13 +85,16 @@ Stream the output to the user. The script does:
 
 #### If SSH hangs / "Connection refused" / "no route to host"
 
-The OCI bastion session has expired. **Do not** try to fix it by editing
-`~/.ssh/config` to a guessed value. Tell the user:
+SSH is direct to the public IP (`129.153.195.31`) — there's no bastion to
+refresh. **Do not** edit `~/.ssh/config` to a guessed IP. Instead:
 
-> Bastion session expired. Open the OCI console (or run your bastion-connect
-> script) to create a new session, then update the `User` field under
-> `Host oci-bastion` in `~/.ssh/config` with the new session OCID and rerun
-> `/gf-deploy`.
+- **Hangs / timeout / no route:** the instance may be down or its public IP
+  changed, or port 22 is firewalled. Verify the IP in `docs/ARCHITECTURE.md`
+  and that the OCI security list + instance `iptables` allow port 22, then
+  tell the user.
+- **`Permission denied (publickey)`:** the deploy key isn't in the server's
+  `~ubuntu/.ssh/authorized_keys`. An existing admin must add it; you can't fix
+  this client-side.
 
 #### If `prisma migrate deploy` fails
 

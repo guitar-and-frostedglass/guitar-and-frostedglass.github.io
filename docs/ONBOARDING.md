@@ -42,13 +42,18 @@ Reboot, then open the Ubuntu terminal. Everything below happens inside WSL (foll
 | PostgreSQL | 16 | Local Prisma migration generation |
 | Git | latest | Source control |
 
-**macOS**
+**macOS** — use [`fnm`](https://github.com/Schniz/fnm) to manage Node (it auto-switches to the version in `.node-version`, currently `20`):
 
 ```bash
-brew install node@20 postgresql@16 git
-echo 'export PATH="/opt/homebrew/opt/node@20/bin:$PATH"' >> ~/.zshrc
+brew install fnm postgresql@16 git
+# Add fnm to your shell — --use-on-cd auto-selects Node per .node-version
+echo 'eval "$(fnm env --use-on-cd)"' >> ~/.zshrc
 source ~/.zshrc
+fnm install 20      # matches CI (.github) and the Docker node:20-alpine image
+fnm default 20
 ```
+
+> A standalone `brew install node@20` also works, but a version manager is preferred so `cd`-ing into the repo always gives you the pinned Node 20.
 
 **Linux**
 
@@ -98,23 +103,22 @@ Copy the output and add it as a deploy key (with write access) to the repository
 
 ### 3c. Configure SSH for the backend server
 
-Add to `~/.ssh/config` (create the file if it doesn't exist):
+The server now accepts **direct SSH on its public IP** — no OCI bastion / ProxyJump anymore. Add to `~/.ssh/config` (create the file if it doesn't exist):
 
 ```
-Host oci-bastion
-    HostName host.bastion.us-phoenix-1.oci.oraclecloud.com
-    User <bastion-session-ocid>
-    IdentityFile ~/.ssh/id_ed25519_guitar
-    Port 22
-
 Host g-f-backend-ubuntu
-    HostName 10.0.0.150
+    HostName 129.153.195.31
     User ubuntu
     IdentityFile ~/.ssh/id_ed25519_guitar
-    ProxyJump oci-bastion
+    IdentitiesOnly yes
+    ServerAliveInterval 60
 ```
 
-The bastion session OCID changes each time — update `User` under `oci-bastion` before SSHing. Create sessions via the OCI console or CLI.
+Then `chmod 600 ~/.ssh/config`. Connect with `ssh g-f-backend-ubuntu`.
+
+Your `id_ed25519_guitar.pub` must be in the server's `~ubuntu/.ssh/authorized_keys` — otherwise the connection is refused with "Permission denied (publickey)". That's added server-side by an existing admin.
+
+> **Historical note:** the server used to sit on a private subnet (`10.0.0.150`) reached via an OCI Bastion (`ProxyJump`). That's no longer used. If you find old config with `Host oci-bastion` / `ProxyJump oci-bastion`, delete it.
 
 ---
 
@@ -400,7 +404,7 @@ After setup, confirm everything works:
 - [ ] `guitar status` works inside the repo (no SSH errors)
 - [ ] `./scripts/frontend_dev.sh` starts Vite on `http://localhost:3000`
 - [ ] You can log in at `http://localhost:3000` using an account on the dev API
-- [ ] `ssh g-f-backend-ubuntu` connects to the server (after setting up a bastion session)
+- [ ] `ssh g-f-backend-ubuntu` connects to the server directly (your key is in the server's `authorized_keys`)
 - [ ] `./scripts/prisma_migrate.sh test_setup` generates a migration without errors (delete it afterwards: `guitar checkout -- backend/prisma/`)
 
 ---
@@ -445,9 +449,12 @@ sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
 
 The migration script expects `postgres:postgres` as the credentials on Linux.
 
-### SSH to server hangs
+### SSH to server hangs or is refused
 
-The bastion session has likely expired. Create a new one in the OCI console and update the `User` field under `Host oci-bastion` in `~/.ssh/config`.
+The server uses direct SSH on its public IP (`129.153.195.31`) — there's no bastion anymore.
+
+- **Hangs / times out:** the server may be down, the IP may have changed, or port 22 is blocked. Verify the IP (`docs/ARCHITECTURE.md`) and that the OCI security list + instance `iptables` allow port 22.
+- **`Permission denied (publickey)`:** your `id_ed25519_guitar.pub` isn't in the server's `~ubuntu/.ssh/authorized_keys`. An existing admin must add it.
 
 ### Frontend dev server can't reach the API
 

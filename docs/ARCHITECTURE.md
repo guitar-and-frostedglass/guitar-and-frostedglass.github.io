@@ -56,7 +56,7 @@ Detailed reference for the Guitar & Frosted Glass deployment. Use this file as c
 | Region | us-phoenix-1 (PHX) |
 | Public IP | 129.153.195.31 |
 | Private IP | 10.0.0.150 |
-| SSH access | Via OCI Bastion service (ProxyJump) |
+| SSH access | Direct to public IP `129.153.195.31` (user `ubuntu`, key auth) |
 | DNS | gfg-api.duckdns.org (DuckDNS) |
 
 ## Docker Containers
@@ -347,23 +347,20 @@ They share the same schema (both receive Prisma migrations), but different JWT s
 
 ## SSH Access
 
-The instance is on a private subnet (10.0.0.150) behind an OCI Bastion. SSH config (`~/.ssh/config`):
+SSH connects **directly to the instance's public IP** (`129.153.195.31`). The OCI Bastion / `ProxyJump` setup is no longer used. SSH config (`~/.ssh/config`, mode `600`):
 
 ```
-Host oci-bastion
-    HostName host.bastion.us-phoenix-1.oci.oraclecloud.com
-    User <bastion-session-ocid>
-    IdentityFile ~/.ssh/id_ed25519_guitar
-    Port 22
-
 Host g-f-backend-ubuntu
-    HostName 10.0.0.150
+    HostName 129.153.195.31
     User ubuntu
     IdentityFile ~/.ssh/id_ed25519_guitar
-    ProxyJump oci-bastion
+    IdentitiesOnly yes
+    ServerAliveInterval 60
 ```
 
-A new bastion session must be created before SSH (the session OCID in the config needs updating each time). Use the bastion-connect script or create sessions via the OCI console/CLI.
+Connect with `ssh g-f-backend-ubuntu`. The `id_ed25519_guitar.pub` key must be present in `~ubuntu/.ssh/authorized_keys` on the instance; an existing admin adds new keys there.
+
+> **Deprecated:** the instance previously sat on the private subnet (`10.0.0.150`) and was reached via an OCI Bastion session (`ProxyJump oci-bastion`) whose OCID expired and had to be refreshed each time. Direct public-IP SSH replaced this.
 
 ## OCI Networking
 
